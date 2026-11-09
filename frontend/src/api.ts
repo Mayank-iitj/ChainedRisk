@@ -7,7 +7,9 @@ import {
   AuditEvent,
   RemediationItem,
   UserProfile,
-  OnboardingProfileData
+  OnboardingProfileData,
+  AssetItem,
+  PolicyRule
 } from './types';
 
 const BASE_URL = '/api/v1';
@@ -273,6 +275,76 @@ export async function fetchPublicConfig() {
 export async function fetchRejectedHypotheses(chainId: string) {
   const res = await fetchWithAuth(`${BASE_URL}/chains/${chainId}/rejections`);
   return handleResponse<any>(res);
+}
+
+export async function fetchProjectRejections(projectId: string) {
+  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/rejections`);
+  return handleResponse<any>(res);
+}
+
+export async function fetchAssets(projectId: string, zone?: string, type?: string): Promise<AssetItem[]> {
+  let url = `${BASE_URL}/projects/${projectId}/assets`;
+  const params = new URLSearchParams();
+  if (zone) params.append('zone', zone);
+  if (type) params.append('type', type);
+  if (params.toString()) url += `?${params.toString()}`;
+  const res = await fetchWithAuth(url);
+  return handleResponse<AssetItem[]>(res);
+}
+
+export async function createAsset(projectId: string, payload: {
+  name: string;
+  type?: string;
+  zone?: string;
+  ip?: string;
+  services?: any[];
+  datastores?: string[];
+  tags?: string[];
+}): Promise<AssetItem> {
+  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/assets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<AssetItem>(res);
+}
+
+export async function deleteAsset(projectId: string, assetId: string) {
+  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/assets/${assetId}`, {
+    method: 'DELETE'
+  });
+  return handleResponse<any>(res);
+}
+
+export async function createNewProject(payload: {
+  name: string;
+  description?: string;
+  scope: { cidrs?: string[]; domains?: string[]; lab_only?: boolean };
+}): Promise<Project> {
+  const res = await fetchWithAuth(`${BASE_URL}/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Project>(res);
+}
+
+export async function updateProject(projectId: string, payload: {
+  name: string;
+  description?: string;
+  scope: { cidrs?: string[]; domains?: string[]; lab_only?: boolean };
+}): Promise<Project> {
+  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Project>(res);
+}
+
+export async function fetchPolicy(): Promise<{ default: string; rules: PolicyRule[] }> {
+  const res = await fetchWithAuth(`${BASE_URL}/policy`);
+  return handleResponse<{ default: string; rules: PolicyRule[] }>(res);
 }
 
 export async function downloadReport(projectId: string, format: 'md' | 'sarif') {

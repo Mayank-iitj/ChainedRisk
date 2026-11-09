@@ -15,7 +15,10 @@ import {
   Sparkles,
   LogOut,
   Sliders,
-  LogIn
+  LogIn,
+  Server,
+  GitBranch,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -47,6 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'chains', label: 'Attack Chains', icon: GitMerge },
         { id: 'graph', label: 'Knowledge Graph', icon: Share2 },
+        { id: 'assets', label: 'Asset Inventory', icon: Server },
         { id: 'findings', label: 'Findings Pool', icon: AlertTriangle },
       ]
     },
@@ -54,16 +58,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: 'DEFENSE & HITL',
       items: [
         { id: 'approvals', label: 'Approval Queue', icon: CheckSquare, badge: pendingApprovalsCount },
+        { id: 'hypotheses', label: 'Hypotheses & Math', icon: GitBranch },
         { id: 'console', label: 'Live Console', icon: Terminal },
         { id: 'remediation', label: 'Min-Cut Fix', icon: Wrench },
       ]
     },
     {
-      title: 'GOVERNANCE',
+      title: 'GOVERNANCE & ADMIN',
       items: [
         { id: 'ingest', label: 'Ingest Studio', icon: UploadCloud },
         { id: 'audit', label: 'Audit Ledger', icon: Shield },
         { id: 'reports', label: 'Reports & SARIF', icon: FileText },
+        { id: 'settings', label: 'Enclave Settings', icon: Sliders },
       ]
     }
   ];

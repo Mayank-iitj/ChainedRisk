@@ -75,6 +75,26 @@ def get_project(id: str, db: Session = Depends(get_db)):
         "created_at": p.created_at
     }
 
+@router.put("/{id}", response_model=ProjectResponse)
+def update_project(id: str, req: ProjectCreate, db: Session = Depends(get_db)):
+    p = db.query(Project).filter(Project.id == id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Project not found")
+    p.name = req.name
+    p.description = req.description or ""
+    p.scope_json = json.dumps(req.scope.model_dump())
+    db.commit()
+    db.refresh(p)
+    return {
+        "id": p.id,
+        "name": p.name,
+        "description": p.description,
+        "scope": json.loads(p.scope_json or "{}"),
+        "created_by": p.created_by,
+        "created_at": p.created_at
+    }
+
+
 @router.get("/{id}/stats")
 def get_project_stats(id: str, db: Session = Depends(get_db)):
     assets = db.query(Asset).filter(Asset.project_id == id).all()

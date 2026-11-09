@@ -15,6 +15,10 @@ import { FindingsList } from './pages/FindingsList';
 import { LandingPage } from './pages/LandingPage';
 import { AuthModal } from './components/AuthModal';
 import { OnboardingWizard } from './pages/OnboardingWizard';
+import { AssetsInventory } from './pages/AssetsInventory';
+import { KnowledgeGraphPage } from './pages/KnowledgeGraphPage';
+import { HypothesesExplorer } from './pages/HypothesesExplorer';
+import { Settings } from './pages/Settings';
 import {
   fetchProjects,
   fetchProjectStats,
@@ -359,17 +363,23 @@ export const App: React.FC = () => {
           )}
 
           {currentTab === 'graph' && (
-            <div className="space-y-4 h-[calc(100vh-140px)] flex flex-col">
-              <div>
-                <h2 className="text-xl font-bold text-slate-800 tracking-tight">Attack Path Knowledge Graph</h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Interactive visualization of DMZ/Internal zones, scanned assets, findings, and derived SSRF reachability.
-                </p>
-              </div>
-              <div className="flex-1">
-                <CytoscapeGraph elements={graphElements} />
-              </div>
-            </div>
+            <KnowledgeGraphPage
+              projectId={projectId}
+              onNavigateToChain={(id) => {
+                setSelectedChainId(id);
+                setCurrentTab('chains');
+              }}
+            />
+          )}
+
+          {currentTab === 'assets' && (
+            <AssetsInventory
+              projectId={projectId}
+              onSelectFindingQuery={(q) => {
+                setSearchQuery(q);
+                setCurrentTab('findings');
+              }}
+            />
           )}
 
           {currentTab === 'findings' && <FindingsList projectId={projectId} initialQuery={searchQuery} />}
@@ -388,6 +398,16 @@ export const App: React.FC = () => {
             <ApprovalsQueue
               approvals={approvals}
               onOpenCard={setActiveApprovalCard}
+            />
+          )}
+
+          {currentTab === 'hypotheses' && (
+            <HypothesesExplorer
+              projectId={projectId}
+              onSelectChain={(id) => {
+                setSelectedChainId(id);
+                setCurrentTab('chains');
+              }}
             />
           )}
 
@@ -410,6 +430,18 @@ export const App: React.FC = () => {
           {currentTab === 'audit' && <Audit />}
 
           {currentTab === 'reports' && <Reports projectId={projectId} />}
+
+          {currentTab === 'settings' && (
+            <Settings
+              currentProjectId={projectId}
+              onSelectProject={(newId) => {
+                setProjectId(newId);
+                refreshAllData();
+              }}
+              currentUser={currentUser}
+              onRefreshData={refreshAllData}
+            />
+          )}
         </main>
       </div>
 

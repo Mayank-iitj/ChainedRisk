@@ -147,6 +147,19 @@ def get_rejected_hypotheses(id: str, db: Session = Depends(get_db)):
         })
     return res
 
+@router.get("/projects/{id}/rejections")
+def get_project_rejections(id: str, db: Session = Depends(get_db)):
+    rejections = db.query(RejectedHypothesis).filter(RejectedHypothesis.project_id == id).all()
+    res = []
+    for r in rejections:
+        res.append({
+            "id": r.id,
+            "reason": r.reason,
+            "payload": json.loads(r.payload_json or "{}"),
+            "created_at": r.created_at
+        })
+    return res
+
 @router.get("/projects/{id}/remediation")
 def get_remediation(id: str, db: Session = Depends(get_db)):
     return compute_min_cut_remediation(project_id=id, db=db)

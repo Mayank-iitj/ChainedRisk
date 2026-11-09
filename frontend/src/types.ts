@@ -10,6 +10,29 @@ export interface Project {
   created_at: string;
 }
 
+export interface AssetItem {
+  id: string;
+  project_id: string;
+  name: string;
+  type: string;
+  zone: string;
+  props: {
+    ip?: string;
+    services?: Array<{ port?: number; proto?: string; product?: string; version?: string }>;
+    datastores?: string[];
+    tags?: string[];
+    [key: string]: any;
+  };
+}
+
+export interface PolicyRule {
+  id: string;
+  target_zone?: string;
+  risk?: string;
+  decision: string;
+  ttl_s?: number;
+}
+
 export interface TargetAssetSummary {
   id: string;
   name: string;
