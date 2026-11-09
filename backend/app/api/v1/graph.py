@@ -1,5 +1,5 @@
 import json
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
@@ -112,7 +112,7 @@ def get_graph(
 @router.get("/projects/{id}/graph/export")
 def export_graph(
     id: str,
-    format: str = Query("json", enum=["json", "cytoscape"]),
+    format: Literal["json", "cytoscape"] = Query("json"),
     db: Session = Depends(get_db)
 ):
     return graph_manager.export_cytoscape(project_id=id, db=db)
