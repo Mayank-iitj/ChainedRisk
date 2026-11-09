@@ -59,6 +59,7 @@ async def reset_kill_switch(db: Session = Depends(get_db)):
 def get_public_config():
     return {
         "env": settings.CR_ENV,
+        "google_client_id": settings.GOOGLE_CLIENT_ID,
         "llm_enabled": settings.CR_LLM_ENABLED,
         "llm_model": settings.CR_LLM_MODEL,
         "lab_network": settings.CR_LAB_NETWORK,

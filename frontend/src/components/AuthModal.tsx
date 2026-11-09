@@ -15,11 +15,13 @@ declare global {
   }
 }
 
+const DEFAULT_GOOGLE_CLIENT_ID = '506395453665-diof91lvuhuhp4kgji3umibrjunuthq8.apps.googleusercontent.com';
+
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [clientId, setClientId] = useState<string>('');
+  const [clientId, setClientId] = useState<string>(DEFAULT_GOOGLE_CLIENT_ID);
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

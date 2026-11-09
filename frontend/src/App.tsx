@@ -41,7 +41,8 @@ export const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const [viewMode, setViewMode] = useState<'landing' | 'app'>(() => {
-    return window.location.hash === '#app' ? 'app' : 'landing';
+    const token = localStorage.getItem('cr_auth_token');
+    return token && window.location.hash === '#app' ? 'app' : 'landing';
   });
   const [currentTab, setCurrentTab] = useState('overview');
   const [projectId, setProjectId] = useState('');
@@ -131,14 +132,16 @@ export const App: React.FC = () => {
   const [isExecuting, setIsExecuting] = useState(false);
 
   useEffect(() => {
+    if (!projectId || viewMode !== 'app' || !currentUser) return;
     refreshAllData();
     const cleanup = setupWebSocket();
     return () => {
       cleanup?.();
     };
-  }, [projectId]);
+  }, [projectId, viewMode, currentUser]);
 
   const refreshAllData = async () => {
+    if (!projectId || viewMode !== 'app' || !currentUser) return;
     try {
       const [statsData, chainsData, approvalsData, graphData, auditData, configData] = await Promise.all([
         fetchProjectStats(projectId),

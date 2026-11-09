@@ -111,9 +111,20 @@ export async function registerUser(payload: {
   return data;
 }
 
-export async function fetchCurrentUser(): Promise<UserProfile> {
-  const res = await fetchWithAuth(`${BASE_URL}/auth/me`);
-  return handleResponse<UserProfile>(res);
+export async function fetchCurrentUser(): Promise<UserProfile | null> {
+  const token = getAuthToken();
+  if (!token) return null;
+  try {
+    const res = await fetchWithAuth(`${BASE_URL}/auth/me`);
+    if (res.status === 401) {
+      setAuthToken(null);
+      return null;
+    }
+    return handleResponse<UserProfile>(res);
+  } catch {
+    setAuthToken(null);
+    return null;
+  }
 }
 
 export async function submitOnboarding(data: OnboardingProfileData): Promise<{ status: string; project_id: string; user: UserProfile }> {
@@ -143,16 +154,26 @@ export async function fetchProjects(): Promise<Project[]> {
 }
 
 export async function fetchProjectStats(projectId: string): Promise<ProjectStats> {
+  if (!projectId) {
+    return {
+      assets: 0,
+      findings: 0,
+      by_severity: { critical: 0, high: 0, medium: 0, low: 0, info: 0 },
+      by_stage: { recon: 0, config: 0, vuln: 0 }
+    };
+  }
   const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/stats`);
   return handleResponse<ProjectStats>(res);
 }
 
 export async function loadDemoScenario(projectId: string = 'prj_demo') {
+  if (!projectId) return null;
   const res = await fetchWithAuth(`${BASE_URL}/seed/load-demo?project_id=${encodeURIComponent(projectId)}`, { method: 'POST' });
   return handleResponse<any>(res);
 }
 
 export async function fetchFindings(projectId: string, filters?: { stage?: string; severity?: string; q?: string }): Promise<Finding[]> {
+  if (!projectId) return [];
   const params = new URLSearchParams();
   if (filters?.stage) params.set('stage', filters.stage);
   if (filters?.severity) params.set('severity', filters.severity);
@@ -162,6 +183,7 @@ export async function fetchFindings(projectId: string, filters?: { stage?: strin
 }
 
 export async function fetchGraph(projectId: string, depth: number = 2, focus?: string) {
+  if (!projectId) return { nodes: [], edges: [] };
   const params = new URLSearchParams({ depth: depth.toString() });
   if (focus) params.set('focus', focus);
   const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/graph?${params.toString()}`);
@@ -169,6 +191,7 @@ export async function fetchGraph(projectId: string, depth: number = 2, focus?: s
 }
 
 export async function correlateProject(projectId: string, useLlm: boolean = true) {
+  if (!projectId) return [];
   const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/correlate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -178,6 +201,7 @@ export async function correlateProject(projectId: string, useLlm: boolean = true
 }
 
 export async function fetchChains(projectId: string): Promise<AttackChain[]> {
+  if (!projectId) return [];
   const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/chains`);
   return handleResponse<AttackChain[]>(res);
 }
