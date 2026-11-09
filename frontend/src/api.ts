@@ -12,11 +12,58 @@ import {
   PolicyRule
 } from './types';
 
-const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim();
-export const API_ORIGIN = rawApiUrl
-  ? (rawApiUrl.startsWith('http') ? rawApiUrl.replace(/\/+$/, '') : `https://${rawApiUrl.replace(/\/+$/, '')}`)
-  : '';
-const BASE_URL = `${API_ORIGIN}/api/v1`;
+export function getApiOrigin(): string {
+  // 1. Explicit user override stored in localStorage
+  const stored = localStorage.getItem('cr_backend_url');
+  if (stored && stored.trim()) {
+    return stored.trim().replace(/\/+$/, '');
+  }
+
+  // 2. Runtime injected config (from docker-entrypoint /runtime-config.js)
+  const runtimeBackend = (window as any).__RUNTIME_CONFIG__?.BACKEND_URL;
+  if (runtimeBackend && runtimeBackend.trim() && !runtimeBackend.includes('127.0.0.1') && !runtimeBackend.includes('localhost')) {
+    return runtimeBackend.trim().replace(/\/+$/, '');
+  }
+
+  // 3. Vite build-time environment variable
+  const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim();
+  if (rawApiUrl) {
+    return rawApiUrl.startsWith('http') ? rawApiUrl.replace(/\/+$/, '') : `https://${rawApiUrl.replace(/\/+$/, '')}`;
+  }
+
+  // 4. Default to same origin (relative path)
+  return '';
+}
+
+export function setApiOrigin(url: string | null) {
+  if (url && url.trim()) {
+    localStorage.setItem('cr_backend_url', url.trim().replace(/\/+$/, ''));
+  } else {
+    localStorage.removeItem('cr_backend_url');
+  }
+}
+
+export function getBaseUrl(): string {
+  const origin = getApiOrigin();
+  return origin ? `${origin}/api/v1` : '/api/v1';
+}
+
+export const API_ORIGIN = getApiOrigin();
+
+export async function testBackendConnection(targetUrl?: string): Promise<{ ok: boolean; status?: number; error?: string }> {
+  try {
+    const origin = targetUrl !== undefined ? targetUrl.trim().replace(/\/+$/, '') : getApiOrigin();
+    const endpoint = origin ? `${origin}/api/v1/config/public` : '/api/v1/config/public';
+    const res = await fetch(endpoint, { signal: AbortSignal.timeout(6000) });
+    if (res.ok) {
+      return { ok: true, status: res.status };
+    }
+    return { ok: false, status: res.status, error: `HTTP ${res.status}: ${res.statusText}` };
+  } catch (err: any) {
+    return { ok: false, error: err.message || 'Connection failed' };
+  }
+}
+
 
 export function getAuthToken(): string | null {
   return localStorage.getItem('cr_auth_token');
@@ -42,6 +89,9 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let errMsg = `Request failed (${res.status}: ${res.statusText})`;
+    if (res.status === 502) {
+      errMsg = '502 Bad Gateway: Backend API service unreachable. Please check backend connection or configure your Backend API URL.';
+    }
     try {
       const errData = await res.json();
       if (errData && errData.detail) {
@@ -58,7 +108,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 // ----------------- Authentication & Onboarding -----------------
 
 export async function fetchGoogleConfig(): Promise<{ client_id: string }> {
-  const res = await fetch(`${BASE_URL}/auth/google/config`);
+  const res = await fetch(`${getBaseUrl()}/auth/google/config`);
   return handleResponse<{ client_id: string }>(res);
 }
 
@@ -68,7 +118,7 @@ export async function authenticateWithGoogle(payload: {
   dev_email?: string;
   dev_name?: string;
 }): Promise<{ access_token: string; user: UserProfile }> {
-  const res = await fetch(`${BASE_URL}/auth/google`, {
+  const res = await fetch(`${getBaseUrl()}/auth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -81,7 +131,7 @@ export async function authenticateWithGoogle(payload: {
 }
 
 export async function loginUser(username: string, password: string): Promise<{ access_token: string; user: UserProfile }> {
-  const res = await fetch(`${BASE_URL}/auth/login`, {
+  const res = await fetch(`${getBaseUrl()}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password })
@@ -103,7 +153,7 @@ export async function registerUser(payload: {
   role?: string;
   discord_id?: string;
 }): Promise<{ access_token: string; user: UserProfile }> {
-  const res = await fetch(`${BASE_URL}/auth/register`, {
+  const res = await fetch(`${getBaseUrl()}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -119,7 +169,7 @@ export async function fetchCurrentUser(): Promise<UserProfile | null> {
   const token = getAuthToken();
   if (!token) return null;
   try {
-    const res = await fetchWithAuth(`${BASE_URL}/auth/me`);
+    const res = await fetchWithAuth(`${getBaseUrl()}/auth/me`);
     if (res.status === 401) {
       setAuthToken(null);
       return null;
@@ -132,7 +182,7 @@ export async function fetchCurrentUser(): Promise<UserProfile | null> {
 }
 
 export async function submitOnboarding(data: OnboardingProfileData): Promise<{ status: string; project_id: string; user: UserProfile }> {
-  const res = await fetchWithAuth(`${BASE_URL}/auth/onboarding`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/auth/onboarding`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
@@ -142,7 +192,7 @@ export async function submitOnboarding(data: OnboardingProfileData): Promise<{ s
 
 export async function logoutUser(): Promise<void> {
   try {
-    await fetchWithAuth(`${BASE_URL}/auth/logout`, { method: 'POST' });
+    await fetchWithAuth(`${getBaseUrl()}/auth/logout`, { method: 'POST' });
   } catch {
     // Ignore network error on logout
   } finally {
@@ -153,7 +203,7 @@ export async function logoutUser(): Promise<void> {
 // ----------------- Core Endpoints -----------------
 
 export async function fetchProjects(): Promise<Project[]> {
-  const res = await fetchWithAuth(`${BASE_URL}/projects`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects`);
   return handleResponse<Project[]>(res);
 }
 
@@ -166,13 +216,13 @@ export async function fetchProjectStats(projectId: string): Promise<ProjectStats
       by_stage: { recon: 0, config: 0, vuln: 0 }
     };
   }
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/stats`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}/stats`);
   return handleResponse<ProjectStats>(res);
 }
 
 export async function loadDemoScenario(projectId: string = 'prj_demo') {
   if (!projectId) return null;
-  const res = await fetchWithAuth(`${BASE_URL}/seed/load-demo?project_id=${encodeURIComponent(projectId)}`, { method: 'POST' });
+  const res = await fetchWithAuth(`${getBaseUrl()}/seed/load-demo?project_id=${encodeURIComponent(projectId)}`, { method: 'POST' });
   return handleResponse<any>(res);
 }
 
@@ -182,7 +232,7 @@ export async function fetchFindings(projectId: string, filters?: { stage?: strin
   if (filters?.stage) params.set('stage', filters.stage);
   if (filters?.severity) params.set('severity', filters.severity);
   if (filters?.q) params.set('q', filters.q);
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/findings?${params.toString()}`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}/findings?${params.toString()}`);
   return handleResponse<Finding[]>(res);
 }
 
@@ -190,13 +240,13 @@ export async function fetchGraph(projectId: string, depth: number = 2, focus?: s
   if (!projectId) return { nodes: [], edges: [] };
   const params = new URLSearchParams({ depth: depth.toString() });
   if (focus) params.set('focus', focus);
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/graph?${params.toString()}`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}/graph?${params.toString()}`);
   return handleResponse<any>(res);
 }
 
 export async function correlateProject(projectId: string, useLlm: boolean = true) {
   if (!projectId) return [];
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/correlate`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}/correlate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mode: 'hybrid', use_llm: useLlm })
@@ -206,32 +256,32 @@ export async function correlateProject(projectId: string, useLlm: boolean = true
 
 export async function fetchChains(projectId: string): Promise<AttackChain[]> {
   if (!projectId) return [];
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/chains`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}/chains`);
   return handleResponse<AttackChain[]>(res);
 }
 
 export async function fetchChain(chainId: string): Promise<AttackChain> {
-  const res = await fetchWithAuth(`${BASE_URL}/chains/${chainId}`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/chains/${chainId}`);
   return handleResponse<AttackChain>(res);
 }
 
 export async function planVerification(chainId: string) {
-  const res = await fetchWithAuth(`${BASE_URL}/chains/${chainId}/plan`, { method: 'POST' });
+  const res = await fetchWithAuth(`${getBaseUrl()}/chains/${chainId}/plan`, { method: 'POST' });
   return handleResponse<any>(res);
 }
 
 export async function runPlan(planId: string) {
-  const res = await fetchWithAuth(`${BASE_URL}/plans/${planId}/run`, { method: 'POST' });
+  const res = await fetchWithAuth(`${getBaseUrl()}/plans/${planId}/run`, { method: 'POST' });
   return handleResponse<any>(res);
 }
 
 export async function fetchApprovals(): Promise<ApprovalCard[]> {
-  const res = await fetchWithAuth(`${BASE_URL}/approvals?status=pending`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/approvals?status=pending`);
   return handleResponse<ApprovalCard[]>(res);
 }
 
 export async function approveCard(cardId: string, justification: string, narrow?: any) {
-  const res = await fetchWithAuth(`${BASE_URL}/approvals/${cardId}/approve`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/approvals/${cardId}/approve`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ justification, narrow })
@@ -240,7 +290,7 @@ export async function approveCard(cardId: string, justification: string, narrow?
 }
 
 export async function denyCard(cardId: string, reason: string) {
-  const res = await fetchWithAuth(`${BASE_URL}/approvals/${cardId}/deny`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/approvals/${cardId}/deny`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ reason })
@@ -249,7 +299,7 @@ export async function denyCard(cardId: string, reason: string) {
 }
 
 export async function executeStepWithToken(stepId: string, token: string) {
-  const res = await fetchWithAuth(`${BASE_URL}/executions/run-step?step_id=${encodeURIComponent(stepId)}&token=${encodeURIComponent(token)}`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/executions/run-step?step_id=${encodeURIComponent(stepId)}&token=${encodeURIComponent(token)}`, {
     method: 'POST'
   });
   return handleResponse<any>(res);
@@ -260,12 +310,12 @@ export async function executeStep(stepId: string, token: string) {
 }
 
 export async function fetchRemediations(projectId: string): Promise<RemediationItem[]> {
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/remediation`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}/remediation`);
   return handleResponse<RemediationItem[]>(res);
 }
 
 export async function simulateFix(projectId: string, excludedFindingIds: string[]) {
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/simulate-fix`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}/simulate-fix`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(excludedFindingIds)
@@ -274,44 +324,44 @@ export async function simulateFix(projectId: string, excludedFindingIds: string[
 }
 
 export async function fetchAuditEvents(): Promise<AuditEvent[]> {
-  const res = await fetchWithAuth(`${BASE_URL}/audit?limit=200`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/audit?limit=200`);
   return handleResponse<AuditEvent[]>(res);
 }
 
 export async function verifyAuditLedger() {
-  const res = await fetchWithAuth(`${BASE_URL}/audit/verify`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/audit/verify`);
   return handleResponse<any>(res);
 }
 
 export async function triggerKillSwitch(reason?: string) {
-  const res = await fetchWithAuth(`${BASE_URL}/kill?reason=${encodeURIComponent(reason || 'Operator kill switch')}`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/kill?reason=${encodeURIComponent(reason || 'Operator kill switch')}`, {
     method: 'POST'
   });
   return handleResponse<any>(res);
 }
 
 export async function resetKillSwitch() {
-  const res = await fetchWithAuth(`${BASE_URL}/kill/reset`, { method: 'POST' });
+  const res = await fetchWithAuth(`${getBaseUrl()}/kill/reset`, { method: 'POST' });
   return handleResponse<any>(res);
 }
 
 export async function fetchPublicConfig() {
-  const res = await fetchWithAuth(`${BASE_URL}/config/public`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/config/public`);
   return handleResponse<any>(res);
 }
 
 export async function fetchRejectedHypotheses(chainId: string) {
-  const res = await fetchWithAuth(`${BASE_URL}/chains/${chainId}/rejections`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/chains/${chainId}/rejections`);
   return handleResponse<any>(res);
 }
 
 export async function fetchProjectRejections(projectId: string) {
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/rejections`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}/rejections`);
   return handleResponse<any>(res);
 }
 
 export async function fetchAssets(projectId: string, zone?: string, type?: string): Promise<AssetItem[]> {
-  let url = `${BASE_URL}/projects/${projectId}/assets`;
+  let url = `${getBaseUrl()}/projects/${projectId}/assets`;
   const params = new URLSearchParams();
   if (zone) params.append('zone', zone);
   if (type) params.append('type', type);
@@ -329,7 +379,7 @@ export async function createAsset(projectId: string, payload: {
   datastores?: string[];
   tags?: string[];
 }): Promise<AssetItem> {
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/assets`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}/assets`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -338,7 +388,7 @@ export async function createAsset(projectId: string, payload: {
 }
 
 export async function deleteAsset(projectId: string, assetId: string) {
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}/assets/${assetId}`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}/assets/${assetId}`, {
     method: 'DELETE'
   });
   return handleResponse<any>(res);
@@ -349,7 +399,7 @@ export async function createNewProject(payload: {
   description?: string;
   scope: { cidrs?: string[]; domains?: string[]; lab_only?: boolean };
 }): Promise<Project> {
-  const res = await fetchWithAuth(`${BASE_URL}/projects`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -362,7 +412,7 @@ export async function updateProject(projectId: string, payload: {
   description?: string;
   scope: { cidrs?: string[]; domains?: string[]; lab_only?: boolean };
 }): Promise<Project> {
-  const res = await fetchWithAuth(`${BASE_URL}/projects/${projectId}`, {
+  const res = await fetchWithAuth(`${getBaseUrl()}/projects/${projectId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -371,10 +421,10 @@ export async function updateProject(projectId: string, payload: {
 }
 
 export async function fetchPolicy(): Promise<{ default: string; rules: PolicyRule[] }> {
-  const res = await fetchWithAuth(`${BASE_URL}/policy`);
+  const res = await fetchWithAuth(`${getBaseUrl()}/policy`);
   return handleResponse<{ default: string; rules: PolicyRule[] }>(res);
 }
 
 export async function downloadReport(projectId: string, format: 'md' | 'sarif') {
-  window.open(`${BASE_URL}/projects/${projectId}/reports/download?format=${format}`, '_blank');
+  window.open(`${getBaseUrl()}/projects/${projectId}/reports/download?format=${format}`, '_blank');
 }

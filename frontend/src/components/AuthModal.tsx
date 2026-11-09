@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Check, Shield, AlertCircle, ArrowRight } from 'lucide-react';
-import { authenticateWithGoogle, fetchPublicConfig } from '../api';
+import { X, Check, Shield, AlertCircle, ArrowRight, Server, RefreshCw } from 'lucide-react';
+import {
+  authenticateWithGoogle,
+  fetchPublicConfig,
+  loginUser,
+  registerUser,
+  getApiOrigin,
+  setApiOrigin,
+  testBackendConnection
+} from '../api';
 import { UserProfile } from '../types';
 
 interface AuthModalProps {
@@ -30,7 +38,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [clientId, setClientId] = useState<string>(DEFAULT_GOOGLE_CLIENT_ID);
+  const [clientId, setClientId] = useState<string>(
+    (window as any).__RUNTIME_CONFIG__?.GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID
+  );
+  const [customApiUrl, setCustomApiUrl] = useState<string>(getApiOrigin());
+  const [showApiConfig, setShowApiConfig] = useState<boolean>(false);
+  const [apiTesting, setApiTesting] = useState<boolean>(false);
+  const [apiSuccessMsg, setApiSuccessMsg] = useState<string | null>(null);
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,61 +58,77 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           setClientId(cfg.google_client_id);
         }
       })
-      .catch((err) => console.error('Failed to load public config:', err));
+      .catch((err) => {
+        console.warn('Failed to load public config (backend may require configuration):', err);
+      });
   }, []);
 
-  useEffect(() => {
-    if (!isOpen || !clientId) return;
-
-    const init = () => {
-      if (window.google?.accounts?.id && clientId) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: handleGoogleCredentialResponse,
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          });
-
-          if (googleBtnRef.current) {
-            googleBtnRef.current.innerHTML = '';
-            window.google.accounts.id.renderButton(googleBtnRef.current, {
-              theme: 'outline',
-              size: 'large',
-              text: mode === 'signin' ? 'signin_with' : 'signup_with',
-              shape: 'rectangular',
-              width: 320,
-            });
-          }
-        } catch (err) {
-          console.error('Error initializing Google Identity:', err);
-        }
-      }
-    };
-
-    if (window.google?.accounts?.id) {
-      init();
-    } else {
-      const existingScript = document.getElementById('google-gsi-script');
-      if (!existingScript) {
-        const script = document.createElement('script');
-        script.id = 'google-gsi-script';
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        script.onload = () => init();
-        document.body.appendChild(script);
+  const handleSaveApiUrl = async () => {
+    setApiTesting(true);
+    setError(null);
+    setApiSuccessMsg(null);
+    try {
+      const cleanUrl = customApiUrl.trim().replace(/\/+$/, '');
+      const res = await testBackendConnection(cleanUrl);
+      if (res.ok) {
+        setApiOrigin(cleanUrl);
+        setApiSuccessMsg('Connected successfully! Backend is reachable.');
+        fetchPublicConfig()
+          .then((cfg) => {
+            if (cfg?.google_client_id) {
+              setClientId(cfg.google_client_id);
+            }
+          })
+          .catch(() => {});
       } else {
-        const poll = setInterval(() => {
-          if (window.google?.accounts?.id) {
-            clearInterval(poll);
-            init();
-          }
-        }, 100);
-        return () => clearInterval(poll);
+        setError(`Cannot connect to backend: ${res.error || 'Server returned error status'}`);
       }
+    } catch (err: any) {
+      setError(err.message || 'Connection test failed');
+    } finally {
+      setApiTesting(false);
     }
-  }, [isOpen, clientId, mode]);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Please provide your email.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setApiSuccessMsg(null);
+    try {
+      if (mode === 'signin') {
+        const authRes = await loginUser(email, password || 'password123');
+        onLoginSuccess(authRes.user);
+        onClose();
+      } else {
+        const username = email.split('@')[0] || `user_${Date.now()}`;
+        const authRes = await registerUser({
+          username,
+          email,
+          password: password || 'password123',
+          full_name: email.split('@')[0],
+          org_name: 'Apex SecCorp'
+        });
+        onLoginSuccess(authRes.user);
+        onClose();
+      }
+    } catch (err: any) {
+      console.error('Authentication failed:', err);
+      const is502 = String(err).includes('502');
+      if (is502) {
+        setError('Backend API unreachable (502 Bad Gateway). Please verify your Backend URL below.');
+        setShowApiConfig(true);
+      } else {
+        setError(err.message || 'Authentication failed. Please verify credentials.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGoogleCredentialResponse = async (response: any) => {
     if (!response || !response.credential) {
@@ -107,12 +137,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
     setLoading(true);
     setError(null);
+    setApiSuccessMsg(null);
     try {
       const authRes = await authenticateWithGoogle({ id_token: response.credential });
       onLoginSuccess(authRes.user);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Google authentication failed.');
+      console.error('Google auth failed:', err);
+      const is502 = String(err).includes('502');
+      if (is502) {
+        setError('Backend API unreachable (502 Bad Gateway). Please verify your Backend URL below.');
+        setShowApiConfig(true);
+      } else {
+        setError(err.message || 'Google authentication failed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -326,14 +364,54 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               )}
 
+              {/* Success Message */}
+              {apiSuccessMsg && (
+                <div className="p-3 bg-emerald-950/40 border border-emerald-800/60 rounded-xl text-emerald-200 text-xs flex items-start gap-2 animate-fadeIn font-sans">
+                  <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <span className="leading-tight">{apiSuccessMsg}</span>
+                </div>
+              )}
+
+              {/* API Configuration Panel (Opens on 502 or via toggle) */}
+              {showApiConfig && (
+                <div className="p-3 bg-[#131418] border border-[#2D3039] rounded-xl space-y-2 animate-fadeIn font-sans text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-neutral-300 flex items-center gap-1.5">
+                      <Server className="w-3.5 h-3.5 text-[#FBBF24]" /> Backend API Endpoint
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowApiConfig(false)}
+                      className="text-neutral-500 hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-neutral-400 leading-tight">
+                    Specify the direct backend API origin (e.g. your Render backend service URL) if reverse-proxying is unreachable:
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={customApiUrl}
+                      onChange={(e) => setCustomApiUrl(e.target.value)}
+                      placeholder="https://chainedrisk-api.onrender.com"
+                      className="flex-1 bg-[#1C1E24] border border-[#333640] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-neutral-500 outline-none focus:border-[#FBBF24]"
+                    />
+                    <button
+                      type="button"
+                      disabled={apiTesting}
+                      onClick={handleSaveApiUrl}
+                      className="px-3 py-1.5 bg-[#FBBF24] hover:bg-[#F59E0B] text-black font-semibold rounded-lg text-xs flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                    >
+                      {apiTesting ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Connect'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Form Inputs */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleTriggerGooglePrompt();
-                }}
-                className="space-y-4"
-              >
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Email Input */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-neutral-300">
@@ -364,24 +442,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   />
                 </div>
 
-                {/* Remember Me Checkbox */}
-                <div className="flex items-center gap-2.5 pt-0.5">
-                  <div
-                    onClick={() => setRememberMe(!rememberMe)}
-                    className={`w-4 h-4 rounded border transition flex items-center justify-center cursor-pointer ${
-                      rememberMe
-                        ? 'bg-[#FBBF24] border-[#FBBF24] text-black'
-                        : 'bg-[#17181C] border-[#363842]'
-                    }`}
-                  >
-                    {rememberMe && <Check className="w-3 h-3 stroke-[3]" />}
+                {/* Remember Me Checkbox & API settings link */}
+                <div className="flex items-center justify-between pt-0.5">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      onClick={() => setRememberMe(!rememberMe)}
+                      className={`w-4 h-4 rounded border transition flex items-center justify-center cursor-pointer ${
+                        rememberMe
+                          ? 'bg-[#FBBF24] border-[#FBBF24] text-black'
+                          : 'bg-[#17181C] border-[#363842]'
+                      }`}
+                    >
+                      {rememberMe && <Check className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                    <label
+                      onClick={() => setRememberMe(!rememberMe)}
+                      className="text-xs text-neutral-400 cursor-pointer select-none font-normal"
+                    >
+                      Remember me
+                    </label>
                   </div>
-                  <label
-                    onClick={() => setRememberMe(!rememberMe)}
-                    className="text-xs text-neutral-400 cursor-pointer select-none font-normal"
+
+                  <button
+                    type="button"
+                    onClick={() => setShowApiConfig(!showApiConfig)}
+                    className="text-[11px] text-neutral-500 hover:text-neutral-300 flex items-center gap-1 cursor-pointer transition"
                   >
-                    Remember me
-                  </label>
+                    <Server className="w-3 h-3" />
+                    <span>API Endpoint</span>
+                  </button>
                 </div>
 
                 {/* Primary Amber Login Button (identical to reference photo) */}

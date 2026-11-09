@@ -31,6 +31,7 @@ import {
   fetchCurrentUser,
   logoutUser,
   getAuthToken,
+  getApiOrigin,
   API_ORIGIN
 } from './api';
 import { ProjectStats, AttackChain, ApprovalCard, UserProfile } from './types';
@@ -171,8 +172,9 @@ export const App: React.FC = () => {
   const setupWebSocket = () => {
     try {
       let wsUrl = '';
-      if (API_ORIGIN) {
-        const urlObj = new URL(API_ORIGIN);
+      const currentOrigin = getApiOrigin();
+      if (currentOrigin) {
+        const urlObj = new URL(currentOrigin);
         const protocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
         wsUrl = `${protocol}//${urlObj.host}/ws`;
       } else {
