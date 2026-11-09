@@ -1,0 +1,735 @@
+{
+  "project": {
+    "name": "Production Assessment Perimeter",
+    "scope": {
+      "cidrs": [
+        "10.77.0.0/24"
+      ],
+      "lab_only": true
+    }
+  },
+  "assets": [
+    {
+      "id": "ast_app",
+      "type": "Host",
+      "name": "app.lab",
+      "ip": "10.77.0.10",
+      "zone": "dmz",
+      "services": [
+        {
+          "port": 8080,
+          "proto": "tcp",
+          "product": "envoy-proxy"
+        },
+        {
+          "port": 443,
+          "proto": "tcp",
+          "product": "nginx/1.24.0"
+        }
+      ]
+    },
+    {
+      "id": "ast_git",
+      "type": "Host",
+      "name": "git.lab",
+      "ip": "10.77.0.11",
+      "zone": "internal",
+      "services": [
+        {
+          "port": 80,
+          "proto": "tcp",
+          "product": "gitlab-ce/16.3"
+        },
+        {
+          "port": 22,
+          "proto": "tcp",
+          "product": "openssh-8.9p1"
+        }
+      ]
+    },
+    {
+      "id": "ast_redis",
+      "type": "Host",
+      "name": "redis.lab",
+      "ip": "10.77.0.12",
+      "zone": "internal",
+      "services": [
+        {
+          "port": 6379,
+          "proto": "tcp",
+          "product": "redis/7.0.5",
+          "auth": "none"
+        }
+      ],
+      "datastores": [
+        {
+          "id": "ds_cache",
+          "kind": "cache",
+          "sensitivity": "crown_jewel"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "fnd_git",
+      "title": "Exposed .git/config Repository Metadata",
+      "stage": "config",
+      "severity": "medium",
+      "asset_id": "ast_app",
+      "source_tool": "nuclei",
+      "rule_id": "git-config-exposure",
+      "confidence": 0.95,
+      "evidence": {
+        "url": "https://app.lab:8080/.git/config",
+        "matched_at": "/.git/config",
+        "response_snippet": "[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n[remote \"origin\"]\n\turl = http://git.lab/scm/core-banking.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n[internal-cluster]\n\tcache_host = redis.lab:6379\n\tauth_required = false"
+      },
+      "provides": [
+        "internal_url_disclosure",
+        "source_repo_access"
+      ],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "info_disclosure",
+        "git",
+        "recon"
+      ]
+    },
+    {
+      "id": "fnd_ssrf",
+      "title": "Server-Side Request Forgery (SSRF) in Proxy Gateway",
+      "stage": "vuln",
+      "severity": "medium",
+      "asset_id": "ast_app",
+      "source_tool": "nuclei",
+      "rule_id": "ssrf-fetch-proxy",
+      "confidence": 0.95,
+      "evidence": {
+        "url": "https://app.lab:8080/fetch?u=http://10.77.0.12:6379/INFO",
+        "cwe": "CWE-918",
+        "response_snippet": "HTTP/1.1 200 OK\nContent-Type: text/plain\n\n# Server\nredis_version:7.0.5\nredis_mode:standalone\nos:Linux 5.15.0-x86_64\ntcp_port:6379\nrole:master\nconnected_slaves:0"
+      },
+      "provides": [
+        "net_pivot_internal"
+      ],
+      "requires": [
+        "internal_url_disclosure"
+      ],
+      "tags": [
+        "ssrf",
+        "cwe-918",
+        "pivot"
+      ]
+    },
+    {
+      "id": "fnd_redis",
+      "title": "Unauthenticated Redis Database with Lua Execution Engine",
+      "stage": "config",
+      "severity": "medium",
+      "asset_id": "ast_redis",
+      "source_tool": "nmap",
+      "rule_id": "redis-unauth-access",
+      "confidence": 0.98,
+      "evidence": {
+        "port": "6379/tcp",
+        "banner": "Redis key-value store 7.0.5",
+        "response_snippet": "+PONG\nINFO replication\n# Replication\nrole:master\nconnected_slaves:0\nCONFIG GET requirepass\n1) \"requirepass\"\n2) \"\""
+      },
+      "provides": [
+        "data_exfil",
+        "code_exec_possible"
+      ],
+      "requires": [
+        "net_pivot_internal"
+      ],
+      "tags": [
+        "unauth",
+        "redis",
+        "rce"
+      ]
+    },
+    {
+      "id": "fnd_gitleaks_jwt",
+      "title": "Hardcoded JWT Secret Key in Repository Commit",
+      "stage": "config",
+      "severity": "high",
+      "asset_id": "ast_git",
+      "source_tool": "gitleaks",
+      "rule_id": "generic-jwt-secret",
+      "confidence": 0.95,
+      "evidence": {
+        "file": "services/auth/config.py",
+        "commit": "8f2a1b92c4e0",
+        "secret": "JWT_SECRET_KEY = 'prod_secops_hmac256_super_secret_signing_key_2026'",
+        "entropy": 4.82
+      },
+      "provides": [
+        "credential_disclosure",
+        "auth_bypass"
+      ],
+      "requires": [
+        "source_repo_access"
+      ],
+      "tags": [
+        "secret",
+        "gitleaks",
+        "cwe-798"
+      ]
+    },
+    {
+      "id": "fnd_cors_wildcard",
+      "title": "Permissive Cross-Origin Resource Sharing (CORS) with Credentials",
+      "stage": "config",
+      "severity": "medium",
+      "asset_id": "ast_app",
+      "source_tool": "nuclei",
+      "rule_id": "cors-misconfiguration",
+      "confidence": 0.92,
+      "evidence": {
+        "origin_sent": "https://evil-attacker.domain",
+        "response_headers": "Access-Control-Allow-Origin: https://evil-attacker.domain\nAccess-Control-Allow-Credentials: true\nVary: Origin"
+      },
+      "provides": [
+        "session_hijacking_vector"
+      ],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "cors",
+        "cwe-942"
+      ]
+    },
+    {
+      "id": "fnd_env_exposed",
+      "title": "Publicly Accessible .env Environment Variable File",
+      "stage": "config",
+      "severity": "high",
+      "asset_id": "ast_app",
+      "source_tool": "nuclei",
+      "rule_id": "env-file-disclosure",
+      "confidence": 0.96,
+      "evidence": {
+        "url": "https://app.lab:8080/.env",
+        "response_snippet": "DATABASE_URL=postgres://admin:MasterKey2026!@10.77.0.15:5432/core_db\nAWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\nAWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+      },
+      "provides": [
+        "cloud_iam_keys",
+        "credential_disclosure"
+      ],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "cwe-552",
+        "cloud_leak"
+      ]
+    },
+    {
+      "id": "fnd_swagger_open",
+      "title": "Unauthenticated Swagger/OpenAPI Interactive Endpoint Catalog",
+      "stage": "recon",
+      "severity": "low",
+      "asset_id": "ast_app",
+      "source_tool": "httpx",
+      "rule_id": "swagger-api-exposed",
+      "confidence": 0.99,
+      "evidence": {
+        "endpoint": "/api/v1/swagger.json",
+        "api_spec": "OpenAPI 3.0.1; 48 internal routes discovered; includes /admin/export and /internal/debug"
+      },
+      "provides": [
+        "api_attack_surface"
+      ],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "openapi",
+        "api_catalog"
+      ]
+    },
+    {
+      "id": "fnd_nmap_ssh_22",
+      "title": "OpenSSH 8.9p1 Ubuntu Service on Internal Network",
+      "stage": "recon",
+      "severity": "info",
+      "asset_id": "ast_git",
+      "source_tool": "nmap",
+      "rule_id": "ssh-version-detect",
+      "confidence": 0.98,
+      "evidence": {
+        "port": "22/tcp",
+        "banner": "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.4",
+        "kex_algorithms": "curve25519-sha256,ecdh-sha2-nistp256"
+      },
+      "provides": [
+        "ssh_service_confirmed"
+      ],
+      "requires": [
+        "net_pivot_internal"
+      ],
+      "tags": [
+        "ssh",
+        "recon"
+      ]
+    },
+    {
+      "id": "fnd_nmap_pg_5432",
+      "title": "Internal PostgreSQL 14.7 Relational Database Port Active",
+      "stage": "recon",
+      "severity": "low",
+      "asset_id": "ast_git",
+      "source_tool": "nmap",
+      "rule_id": "postgres-port-open",
+      "confidence": 0.98,
+      "evidence": {
+        "port": "5432/tcp",
+        "service": "postgresql",
+        "version": "14.7-Debian"
+      },
+      "provides": [
+        "database_endpoint_confirmed"
+      ],
+      "requires": [
+        "net_pivot_internal"
+      ],
+      "tags": [
+        "postgres",
+        "database"
+      ]
+    },
+    {
+      "id": "fnd_hdr_csp",
+      "title": "Missing Content-Security-Policy (CSP) Security Header",
+      "stage": "config",
+      "severity": "low",
+      "asset_id": "ast_app",
+      "source_tool": "headers",
+      "rule_id": "missing-csp",
+      "confidence": 0.99,
+      "evidence": {
+        "audit": "Response headers lack Content-Security-Policy directive. Frame-ancestors and script sources unrestricted."
+      },
+      "provides": [],
+      "requires": [],
+      "tags": [
+        "headers",
+        "cwe-693"
+      ]
+    },
+    {
+      "id": "fnd_hdr_hsts",
+      "title": "Missing HTTP Strict-Transport-Security (HSTS) Header",
+      "stage": "config",
+      "severity": "low",
+      "asset_id": "ast_app",
+      "source_tool": "headers",
+      "rule_id": "missing-hsts",
+      "confidence": 0.99,
+      "evidence": {
+        "audit": "Header Strict-Transport-Security not present; downgrade attacks possible on unencrypted redirects."
+      },
+      "provides": [],
+      "requires": [],
+      "tags": [
+        "headers",
+        "ssl_tls"
+      ]
+    },
+    {
+      "id": "fnd_hdr_xfo",
+      "title": "Missing X-Frame-Options Clickjacking Protection",
+      "stage": "config",
+      "severity": "low",
+      "asset_id": "ast_app",
+      "source_tool": "headers",
+      "rule_id": "missing-xfo",
+      "confidence": 0.99,
+      "evidence": {
+        "audit": "X-Frame-Options header not returned; endpoint can be rendered inside arbitrary third-party iframes."
+      },
+      "provides": [],
+      "requires": [],
+      "tags": [
+        "headers",
+        "cwe-1021"
+      ]
+    },
+    {
+      "id": "fnd_ver_banner",
+      "title": "Detailed Web Application Server & Framework Banner Disclosure",
+      "stage": "recon",
+      "severity": "info",
+      "asset_id": "ast_app",
+      "source_tool": "httpx",
+      "rule_id": "server-banner-disclosure",
+      "confidence": 0.99,
+      "evidence": {
+        "headers": "Server: Werkzeug/3.0.1 Python/3.11.8\nX-Powered-By: Flask"
+      },
+      "provides": [
+        "framework_fingerprint"
+      ],
+      "requires": [],
+      "tags": [
+        "fingerprint",
+        "recon"
+      ]
+    },
+    {
+      "id": "fnd_cookie_httponly",
+      "title": "Session Identifier Cookie Missing HttpOnly & Secure Flags",
+      "stage": "config",
+      "severity": "medium",
+      "asset_id": "ast_app",
+      "source_tool": "headers",
+      "rule_id": "insecure-session-cookie",
+      "confidence": 0.94,
+      "evidence": {
+        "cookie": "Set-Cookie: cr_session=d89f02a31c4b7e; Path=/; SameSite=Lax",
+        "audit": "HttpOnly flag omitted; cookie accessible to JavaScript document.cookie"
+      },
+      "provides": [
+        "session_theft_possible"
+      ],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "cwe-1004",
+        "cookies"
+      ]
+    },
+    {
+      "id": "fnd_cve_2022_0543",
+      "title": "CVE-2022-0543 Redis Lua Package Sandbox Escape Advisory",
+      "stage": "vuln",
+      "severity": "critical",
+      "asset_id": "ast_redis",
+      "source_tool": "nuclei",
+      "rule_id": "cve-2022-0543-lua-escape",
+      "confidence": 0.91,
+      "evidence": {
+        "cve": "CVE-2022-0543",
+        "cvss": 10.0,
+        "detail": "Debian/Ubuntu Redis packages dynamic library initialization allows loading package.loadlib in sandbox to execute arbitrary OS shell commands."
+      },
+      "provides": [
+        "remote_code_execution"
+      ],
+      "requires": [
+        "net_pivot_internal",
+        "data_exfil"
+      ],
+      "tags": [
+        "cve",
+        "rce",
+        "redis"
+      ]
+    },
+    {
+      "id": "fnd_cve_2021_41773",
+      "title": "CVE-2021-41773 Apache HTTP Server Path Traversal Candidate",
+      "stage": "vuln",
+      "severity": "medium",
+      "asset_id": "ast_app",
+      "source_tool": "nuclei",
+      "rule_id": "cve-2021-41773-traversal",
+      "confidence": 0.88,
+      "evidence": {
+        "path": "/icons/.%%32%65/.%%32%65/.%%32%65/etc/passwd",
+        "status": "403 Forbidden with ModSecurity signature match"
+      },
+      "provides": [],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "cve",
+        "path_traversal"
+      ]
+    },
+    {
+      "id": "fnd_backup_dump",
+      "title": "Residual Database Dump Archive Discovered on Static Asset Root",
+      "stage": "vuln",
+      "severity": "high",
+      "asset_id": "ast_app",
+      "source_tool": "nuclei",
+      "rule_id": "backup-dump-exposure",
+      "confidence": 0.94,
+      "evidence": {
+        "url": "https://app.lab:8080/backup_2026.sql.gz",
+        "header": "Content-Type: application/gzip\nContent-Length: 14892019 bytes\nETag: \"5f82-61a0b3\""
+      },
+      "provides": [
+        "data_exfil",
+        "credential_disclosure"
+      ],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "cwe-530",
+        "backup_leak"
+      ]
+    },
+    {
+      "id": "fnd_tls_deprecated",
+      "title": "Legacy TLS 1.0 & TLS 1.1 Cipher Suites Negotiated",
+      "stage": "config",
+      "severity": "low",
+      "asset_id": "ast_app",
+      "source_tool": "httpx",
+      "rule_id": "tls-deprecated-versions",
+      "confidence": 0.99,
+      "evidence": {
+        "ciphers": "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA (0xc013) accepted on port 443"
+      },
+      "provides": [],
+      "requires": [],
+      "tags": [
+        "ssl_tls",
+        "cipher"
+      ]
+    },
+    {
+      "id": "fnd_admin_route",
+      "title": "Unauthenticated Administrative Control Route /admin/debug",
+      "stage": "vuln",
+      "severity": "medium",
+      "asset_id": "ast_app",
+      "source_tool": "nuclei",
+      "rule_id": "admin-debug-route",
+      "confidence": 0.92,
+      "evidence": {
+        "url": "https://app.lab:8080/admin/debug",
+        "response_snippet": "{\"debug\": true, \"cluster_state\": \"HEALTHY\", \"worker_nodes\": [\"10.77.0.10\", \"10.77.0.11\", \"10.77.0.12\"]}"
+      },
+      "provides": [
+        "internal_topology_leak"
+      ],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "cwe-200",
+        "admin"
+      ]
+    },
+    {
+      "id": "fnd_graphql_introspect",
+      "title": "GraphQL Introspection Query Enabled on Production Endpoint",
+      "stage": "config",
+      "severity": "low",
+      "asset_id": "ast_app",
+      "source_tool": "nuclei",
+      "rule_id": "graphql-introspection-enabled",
+      "confidence": 0.95,
+      "evidence": {
+        "endpoint": "/graphql",
+        "query": "query { __schema { types { name } } }",
+        "types_discovered": 142
+      },
+      "provides": [
+        "schema_disclosure"
+      ],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "graphql",
+        "schema"
+      ]
+    },
+    {
+      "id": "fnd_gitlab_cve",
+      "title": "GitLab Community Edition Unauthenticated User Enumeration",
+      "stage": "recon",
+      "severity": "low",
+      "asset_id": "ast_git",
+      "source_tool": "nuclei",
+      "rule_id": "gitlab-user-enum",
+      "confidence": 0.90,
+      "evidence": {
+        "endpoint": "http://git.lab/api/v4/users",
+        "users_enumerated": ["root", "secops_admin", "deploy_bot"]
+      },
+      "provides": [
+        "user_enumeration"
+      ],
+      "requires": [
+        "net_pivot_internal"
+      ],
+      "tags": [
+        "gitlab",
+        "enum"
+      ]
+    },
+    {
+      "id": "fnd_actuator_health",
+      "title": "Spring Boot / Microservice Actuator Endpoints Reachable",
+      "stage": "recon",
+      "severity": "info",
+      "asset_id": "ast_app",
+      "source_tool": "httpx",
+      "rule_id": "spring-actuator-exposed",
+      "confidence": 0.96,
+      "evidence": {
+        "path": "/actuator/health",
+        "response": "{\"status\":\"UP\",\"components\":{\"db\":{\"status\":\"UP\"},\"diskSpace\":{\"status\":\"UP\"}}}"
+      },
+      "provides": [],
+      "requires": [],
+      "tags": [
+        "actuator",
+        "recon"
+      ]
+    },
+    {
+      "id": "fnd_rate_limit_absent",
+      "title": "Lack of API Rate Limiting on Authentication Endpoints",
+      "stage": "config",
+      "severity": "low",
+      "asset_id": "ast_app",
+      "source_tool": "nuclei",
+      "rule_id": "rate-limit-missing",
+      "confidence": 0.89,
+      "evidence": {
+        "requests_sent": "150 requests in 2.1s without 429 Too Many Requests response"
+      },
+      "provides": [
+        "brute_force_vector"
+      ],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "cwe-307",
+        "rate_limit"
+      ]
+    },
+    {
+      "id": "fnd_trace_method",
+      "title": "HTTP TRACE/TRACK Diagnostic Method Enabled on Reverse Proxy",
+      "stage": "config",
+      "severity": "info",
+      "asset_id": "ast_app",
+      "source_tool": "httpx",
+      "rule_id": "http-trace-enabled",
+      "confidence": 0.97,
+      "evidence": {
+        "method": "TRACE / HTTP/1.1",
+        "response": "HTTP/1.1 200 OK\nMessage body echoes request headers"
+      },
+      "provides": [],
+      "requires": [],
+      "tags": [
+        "trace",
+        "cwe-200"
+      ]
+    },
+    {
+      "id": "fnd_git_history_leaks",
+      "title": "Gitleaks Scan Detected Historical Commits with Private RSA Keys",
+      "stage": "vuln",
+      "severity": "high",
+      "asset_id": "ast_git",
+      "source_tool": "gitleaks",
+      "rule_id": "gitleaks-ssh-privkey",
+      "confidence": 0.96,
+      "evidence": {
+        "commit": "31b402ef891",
+        "file": "deploy/id_rsa_deploy",
+        "header": "-----BEGIN RSA PRIVATE KEY-----"
+      },
+      "provides": [
+        "ssh_lateral_movement",
+        "credential_disclosure"
+      ],
+      "requires": [
+        "source_repo_access"
+      ],
+      "tags": [
+        "gitleaks",
+        "ssh_key",
+        "cwe-798"
+      ]
+    },
+    {
+      "id": "fnd_sudo_privesc_cve",
+      "title": "CVE-2023-22809 Sudoers File Overwrite Vulnerability Present in Container Base",
+      "stage": "vuln",
+      "severity": "medium",
+      "asset_id": "ast_redis",
+      "source_tool": "nuclei",
+      "rule_id": "cve-2023-22809-sudo-check",
+      "confidence": 0.90,
+      "evidence": {
+        "sudo_version": "1.8.31p2",
+        "status": "Vulnerable to sudoedit arbitrary file write"
+      },
+      "provides": [
+        "root_privilege_escalation"
+      ],
+      "requires": [
+        "code_exec_possible"
+      ],
+      "tags": [
+        "cve",
+        "privesc"
+      ]
+    },
+    {
+      "id": "fnd_dns_zone_transfer",
+      "title": "Internal DNS Forwarder Responds with Subnet Records",
+      "stage": "recon",
+      "severity": "low",
+      "asset_id": "ast_app",
+      "source_tool": "nmap",
+      "rule_id": "dns-internal-leak",
+      "confidence": 0.93,
+      "evidence": {
+        "records": "A 10.77.0.10 app.lab; A 10.77.0.11 git.lab; A 10.77.0.12 redis.lab; A 10.77.0.15 db.internal"
+      },
+      "provides": [
+        "internal_url_disclosure"
+      ],
+      "requires": [
+        "attacker_external"
+      ],
+      "tags": [
+        "dns",
+        "recon"
+      ]
+    }
+  ],
+  "ground_truth": {
+    "expected_chains": [
+      {
+        "steps": [
+          "fnd_git",
+          "fnd_ssrf",
+          "fnd_redis"
+        ],
+        "terminal": "data_exfil"
+      },
+      {
+        "steps": [
+          "fnd_git",
+          "fnd_gitleaks_jwt",
+          "fnd_git_history_leaks"
+        ],
+        "terminal": "ssh_lateral_movement"
+      }
+    ],
+    "negative_cases": [
+      "redis_auth_enabled",
+      "ssrf_blocked_internal"
+    ]
+  }
+}
