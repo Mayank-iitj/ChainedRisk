@@ -39,6 +39,12 @@ class OnboardingRequest(BaseModel):
     notification_webhook: Optional[str] = ""
     seed_baseline_scenario: bool = True
 
+class GoogleAuthRequest(BaseModel):
+    id_token: Optional[str] = None
+    code: Optional[str] = None
+    dev_email: Optional[str] = None
+    dev_name: Optional[str] = None
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -53,6 +59,7 @@ class UserResponse(BaseModel):
     org_name: Optional[str] = None
     title: Optional[str] = None
     role: str
+    avatar_url: Optional[str] = None
     discord_id: Optional[str] = None
     onboarding_completed: bool = False
     onboarding_profile: Optional[Dict[str, Any]] = None

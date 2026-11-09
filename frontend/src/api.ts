@@ -51,6 +51,29 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 // ----------------- Authentication & Onboarding -----------------
 
+export async function fetchGoogleConfig(): Promise<{ client_id: string }> {
+  const res = await fetch(`${BASE_URL}/auth/google/config`);
+  return handleResponse<{ client_id: string }>(res);
+}
+
+export async function authenticateWithGoogle(payload: {
+  id_token?: string;
+  code?: string;
+  dev_email?: string;
+  dev_name?: string;
+}): Promise<{ access_token: string; user: UserProfile }> {
+  const res = await fetch(`${BASE_URL}/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await handleResponse<{ access_token: string; user: UserProfile }>(res);
+  if (data?.access_token) {
+    setAuthToken(data.access_token);
+  }
+  return data;
+}
+
 export async function loginUser(username: string, password: string): Promise<{ access_token: string; user: UserProfile }> {
   const res = await fetch(`${BASE_URL}/auth/login`, {
     method: 'POST',

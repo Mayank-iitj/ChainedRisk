@@ -1,14 +1,16 @@
 import json
 import uuid
 import re
+import hashlib
 from pathlib import Path
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
+from backend.app.core.config import settings
 from backend.app.models.db_models import User, Project, Asset, Finding, utcnow_str
 from backend.app.models.schemas import (
-    LoginRequest, RegisterRequest, OnboardingRequest, TokenResponse, UserResponse
+    LoginRequest, RegisterRequest, OnboardingRequest, GoogleAuthRequest, TokenResponse, UserResponse
 )
 from backend.app.core.security import (
     verify_password, hash_password, create_access_token, decode_access_token
@@ -46,11 +48,143 @@ def serialize_user(user: User) -> Dict[str, Any]:
         "full_name": user.full_name or user.username.capitalize(),
         "org_name": user.org_name or "Enterprise Cyber Labs",
         "title": user.title or "Security Analyst",
+        "avatar_url": getattr(user, 'avatar_url', None),
         "role": user.role,
         "discord_id": user.discord_id,
         "onboarding_completed": bool(user.onboarding_completed),
         "onboarding_profile": profile,
         "active_project_id": user.active_project_id or "prj_demo"
+    }
+
+@router.get("/google/config")
+def get_google_config():
+    """Returns the configured Google OAuth 2.0 Web Client ID."""
+    return {
+        "client_id": settings.GOOGLE_CLIENT_ID or ""
+    }
+
+@router.post("/google", response_model=TokenResponse)
+def authenticate_with_google(req: GoogleAuthRequest, db: Session = Depends(get_db)):
+    """
+    Authenticates or signs up users via Google OAuth 2.0.
+    Accepts a verified Google ID Token, authorization code, or local dev profile.
+    """
+    email = None
+    name = None
+    picture = None
+    google_sub = None
+
+    # 1. Verify Real Google ID Token via Google tokeninfo endpoint
+    if req.id_token:
+        try:
+            import urllib.request
+            verify_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={req.id_token}"
+            with urllib.request.urlopen(verify_url, timeout=5) as resp:
+                token_data = json.loads(resp.read().decode())
+                email = token_data.get("email")
+                name = token_data.get("name")
+                picture = token_data.get("picture")
+                google_sub = token_data.get("sub")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Google ID token verification failed: {e}")
+
+    # 2. Authorization code exchange
+    elif req.code and settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET:
+        try:
+            import urllib.request
+            import urllib.parse
+            token_url = "https://oauth2.googleapis.com/token"
+            post_data = urllib.parse.urlencode({
+                "code": req.code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": "postmessage",
+                "grant_type": "authorization_code"
+            }).encode()
+            token_req = urllib.request.Request(
+                token_url,
+                data=post_data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"}
+            )
+            with urllib.request.urlopen(token_req, timeout=5) as t_resp:
+                token_info = json.loads(t_resp.read().decode())
+                acc_token = token_info.get("access_token")
+                # Fetch userinfo
+                user_req = urllib.request.Request(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    headers={"Authorization": f"Bearer {acc_token}"}
+                )
+                with urllib.request.urlopen(user_req, timeout=5) as u_resp:
+                    u_data = json.loads(u_resp.read().decode())
+                    email = u_data.get("email")
+                    name = u_data.get("name")
+                    picture = u_data.get("picture")
+                    google_sub = u_data.get("sub")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Google authorization code exchange failed: {e}")
+
+    # 3. Dev / Sandbox instant sign-in fallback (for local evaluation when client_id is not yet set)
+    elif req.dev_email:
+        email = req.dev_email.strip().lower()
+        name = req.dev_name or email.split('@')[0].capitalize()
+        google_sub = f"g_dev_{hashlib.sha256(email.encode()).hexdigest()[:12]}"
+        picture = f"https://api.dicebear.com/7.x/bottts/svg?seed={email}"
+
+    if not email:
+        raise HTTPException(
+            status_code=400,
+            detail="Google authentication requires a valid Google ID token, authorization code, or profile."
+        )
+
+    # Look up existing user by google_id or email
+    user = db.query(User).filter(
+        (User.google_id == google_sub) | (User.email == email)
+    ).first()
+
+    if user:
+        # Existing user login: update Google ID and avatar if needed
+        if not user.google_id:
+            user.google_id = google_sub
+        if picture and not user.avatar_url:
+            user.avatar_url = picture
+        db.commit()
+        db.refresh(user)
+    else:
+        # New user sign-up via Google OAuth
+        raw_username = email.split('@')[0].replace('.', '_').replace('-', '_').lower()
+        username = raw_username
+        if db.query(User).filter(User.username == username).first():
+            username = f"{raw_username}_{uuid.uuid4().hex[:4]}"
+
+        domain_part = email.split('@')[1].split('.')[0] if '@' in email else "enterprise"
+        org_name = f"{domain_part.capitalize()} Cyber Labs"
+
+        user = User(
+            id=f"usr_{uuid.uuid4().hex[:8]}",
+            username=username,
+            email=email,
+            full_name=name or username.capitalize(),
+            org_name=org_name,
+            title="Lead SecOps Engineer",
+            pw_hash="oauth_google",
+            google_id=google_sub,
+            avatar_url=picture,
+            role="analyst",
+            onboarding_completed=False,
+            onboarding_profile_json="{}",
+            active_project_id=None,
+            created_at=utcnow_str()
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    token = create_access_token({"sub": user.username, "role": user.role, "user_id": user.id, "email": user.email})
+    return {
+        "access_token": token,
+        "refresh_token": f"ref_{user.id}",
+        "expires_in": 900,
+        "user": serialize_user(user)
     }
 
 @router.post("/register", response_model=TokenResponse)

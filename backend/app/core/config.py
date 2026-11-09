@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     DISCORD_CHANNEL_ID: str = ""
     CR_APPROVER_DISCORD_IDS: str = ""
 
+    # Google OAuth 2.0 Credentials
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
 
 settings = Settings()

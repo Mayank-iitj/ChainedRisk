@@ -14,7 +14,9 @@ class User(Base):
     full_name = Column(String, nullable=True)
     org_name = Column(String, nullable=True)
     title = Column(String, nullable=True)
-    pw_hash = Column(String, nullable=False)
+    pw_hash = Column(String, nullable=True, default="")
+    google_id = Column(String, unique=True, nullable=True)
+    avatar_url = Column(String, nullable=True)
     role = Column(String, default="analyst") # viewer, analyst, approver, admin
     discord_id = Column(String, nullable=True)
     onboarding_completed = Column(Boolean, default=False)

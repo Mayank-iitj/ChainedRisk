@@ -31,6 +31,8 @@ def migrate_sqlite_columns():
                     ("full_name", "VARCHAR"),
                     ("org_name", "VARCHAR"),
                     ("title", "VARCHAR"),
+                    ("google_id", "VARCHAR"),
+                    ("avatar_url", "VARCHAR"),
                     ("onboarding_completed", "BOOLEAN DEFAULT 0"),
                     ("onboarding_profile_json", "TEXT DEFAULT '{}'"),
                     ("active_project_id", "VARCHAR"),

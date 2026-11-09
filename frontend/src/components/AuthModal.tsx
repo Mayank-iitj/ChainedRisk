@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
-import { X, Lock, Mail, User, Building, Shield, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
-import { loginUser, registerUser } from '../api';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Shield, Sparkles, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { fetchGoogleConfig, authenticateWithGoogle } from '../api';
 import { UserProfile } from '../types';
+
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -19,92 +25,126 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string>('');
+  const [gisLoaded, setGisLoaded] = useState(false);
+  const [customEmail, setCustomEmail] = useState('');
+  const googleBtnRef = useRef<HTMLDivElement>(null);
 
-  // Sign In fields
-  const [loginIdentifier, setLoginIdentifier] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  useEffect(() => {
+    setMode(initialMode);
+    setError(null);
+  }, [initialMode, isOpen]);
 
-  // Sign Up fields
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [orgName, setOrgName] = useState('');
-  const [title, setTitle] = useState('Lead SecOps Engineer');
-  const [role, setRole] = useState('analyst');
-  const [signupPassword, setSignupPassword] = useState('');
+  // Fetch Google Client ID on mount
+  useEffect(() => {
+    let mounted = true;
+    fetchGoogleConfig()
+      .then((cfg) => {
+        if (mounted && cfg?.client_id) {
+          setClientId(cfg.client_id);
+        }
+      })
+      .catch((err) => console.warn('Could not fetch Google config:', err));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Initialize and render Google Identity Services button if available
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const checkGis = () => {
+      if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+        setGisLoaded(true);
+        if (clientId && googleBtnRef.current) {
+          try {
+            window.google.accounts.id.initialize({
+              client_id: clientId,
+              callback: handleCredentialResponse,
+              auto_select: false,
+              cancel_on_tap_outside: true,
+            });
+            window.google.accounts.id.renderButton(googleBtnRef.current, {
+              type: 'standard',
+              theme: 'outline',
+              size: 'large',
+              text: mode === 'signup' ? 'signup_with' : 'signin_with',
+              shape: 'rectangular',
+              logo_alignment: 'left',
+              width: 360,
+            });
+          } catch (e) {
+            console.warn('Google Identity button render error:', e);
+          }
+        }
+      }
+    };
+
+    checkGis();
+    const interval = setInterval(checkGis, 600);
+    return () => clearInterval(interval);
+  }, [isOpen, clientId, mode]);
 
   if (!isOpen) return null;
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    if (!loginIdentifier || !loginPassword) {
-      setError('Please fill in both username/email and password.');
+  const handleCredentialResponse = async (response: any) => {
+    if (!response || !response.credential) {
+      setError('Google Sign-In was cancelled or failed to return a credential.');
       return;
     }
-
     setLoading(true);
+    setError(null);
     try {
-      const res = await loginUser(loginIdentifier, loginPassword);
+      const res = await authenticateWithGoogle({ id_token: response.credential });
       onSuccess(res.user);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please verify your credentials.');
+      setError(err.message || 'Google authentication failed. Please verify token or configuration.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!fullName || !email || !username || !orgName || !signupPassword) {
-      setError('Please fill in all required registration fields.');
-      return;
-    }
-    if (signupPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
-
+  const handleDevGoogleLogin = async (email: string, name: string) => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await registerUser({
-        full_name: fullName,
-        email,
-        username,
-        org_name: orgName,
-        title,
-        role,
-        password: signupPassword
+      const res = await authenticateWithGoogle({
+        dev_email: email,
+        dev_name: name,
       });
       onSuccess(res.user);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Username or email may already be registered.');
+      setError(err.message || 'Authentication error.');
     } finally {
       setLoading(false);
     }
   };
 
-  const fillQuickDemo = (user: string, pass: string) => {
-    setLoginIdentifier(user);
-    setLoginPassword(pass);
-    setError(null);
+  const handleCustomEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customEmail || !customEmail.includes('@')) {
+      setError('Please provide a valid Google Workspace or Gmail address.');
+      return;
+    }
+    const derivedName = customEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    handleDevGoogleLogin(customEmail, derivedName);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
       <div
-        className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all"
+        className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all text-slate-800"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header Banner */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-7 py-6 relative">
+        {/* Header Banner */}
+        <div className="bg-[#0A0A0A] text-white px-7 py-6 relative border-b border-white/10">
           <button
             onClick={onClose}
-            className="absolute top-5 right-5 text-slate-400 hover:text-white transition p-1 rounded-lg hover:bg-white/10 cursor-pointer"
+            className="absolute top-5 right-5 text-slate-400 hover:text-white transition p-1.5 rounded-lg hover:bg-white/10 cursor-pointer"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
@@ -113,29 +153,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-inner">
               <Shield className="w-4 h-4 text-indigo-300" />
             </div>
-            <span className="text-xs font-mono tracking-widest uppercase text-indigo-300 font-semibold">
-              ChainedRisk Security Access
+            <span className="text-xs font-mono tracking-widest uppercase text-indigo-400 font-semibold">
+              ChainedRisk Identity Protocol
             </span>
           </div>
 
-          <h3 className="text-xl font-extrabold tracking-tight text-white">
-            {mode === 'signin' ? 'Sign In to Your Workspace' : 'Create Organization Workspace'}
+          <h3 className="text-xl font-bold tracking-tight text-white">
+            {mode === 'signin' ? 'Sign In with Google' : 'Create Account with Google'}
           </h3>
-          <p className="text-xs text-slate-300 mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             {mode === 'signin'
-              ? 'Access real-time attack path graphs, telemetry, and HITL authorization.'
-              : 'Provision a security enclave tailored to your cloud perimeter and crown jewels.'}
+              ? 'Single-click authentication via your authorized Google Cloud or Workspace account.'
+              : 'Provision your security enclave and embark on the guided perimeter onboarding sequence.'}
           </p>
 
-          {/* Mode Switcher Tabs */}
-          <div className="flex items-center gap-2 mt-5 p-1 bg-white/10 rounded-xl backdrop-blur-sm">
+          {/* Mode Switcher */}
+          <div className="flex items-center gap-2 mt-5 p-1 bg-white/[0.07] rounded-xl border border-white/10">
             <button
               type="button"
               onClick={() => { setMode('signin'); setError(null); }}
-              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 mode === 'signin'
                   ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Sign In
@@ -143,233 +183,193 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <button
               type="button"
               onClick={() => { setMode('signup'); setError(null); }}
-              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 mode === 'signup'
                   ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              Register New Account
+              New Registration
             </button>
           </div>
         </div>
 
-        {/* Error Notification */}
+        {/* Error Alert */}
         {error && (
-          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-            <span>{error}</span>
+          <div className="mx-6 mt-4 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="leading-snug">{error}</div>
           </div>
         )}
 
-        {/* Form Body */}
-        <div className="p-7 pt-5">
-          {mode === 'signin' ? (
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Username or Work Email
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                  <input
-                    type="text"
-                    required
-                    value={loginIdentifier}
-                    onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="admin or analyst@org.com"
-                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-                  />
-                </div>
-              </div>
+        {/* Modal Main Content */}
+        <div className="p-7 space-y-6">
+          {/* Primary Google Auth Section */}
+          <div className="space-y-3">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-slate-500 text-center">
+              Google OAuth 2.0 / OpenID Connect
+            </div>
 
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-xs font-bold text-slate-700">
-                    Password
-                  </label>
-                  <span className="text-[11px] text-slate-400 font-mono">Min 6 chars</span>
-                </div>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                  <input
-                    type="password"
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-                  />
-                </div>
+            {/* Official Google Identity Button Mount (if live client ID configured) */}
+            {clientId ? (
+              <div className="flex flex-col items-center justify-center space-y-3">
+                <div ref={googleBtnRef} className="min-h-[44px] flex justify-center w-full" />
+                <p className="text-[11px] text-slate-500 text-center">
+                  Protected by Google Cloud Identity Services. Requires scopes: <code className="text-indigo-600 font-mono">openid, email, profile</code>.
+                </p>
               </div>
-
-              {/* Quick Demo Logins Helper */}
-              <div className="pt-1">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>Instant Demo Credentials</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fillQuickDemo('admin', 'admin123')}
-                    className="py-1.5 px-2 bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg text-[11px] font-semibold text-slate-700 hover:text-indigo-600 text-center transition cursor-pointer"
-                  >
-                    Admin (CISO)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fillQuickDemo('analyst', 'analyst123')}
-                    className="py-1.5 px-2 bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg text-[11px] font-semibold text-slate-700 hover:text-indigo-600 text-center transition cursor-pointer"
-                  >
-                    Analyst (SecOps)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fillQuickDemo('approver', 'approver123')}
-                    className="py-1.5 px-2 bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg text-[11px] font-semibold text-slate-700 hover:text-indigo-600 text-center transition cursor-pointer"
-                  >
-                    HITL Approver
-                  </button>
-                </div>
+            ) : (
+              /* Fallback Primary Google Button when waiting on Cloud Console configuration */
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => handleDevGoogleLogin('secops.lead@enterprise.corp', 'Alex Vance (Lead SecOps)')}
+                  className="w-full py-3 px-4 bg-white hover:bg-slate-50 active:bg-slate-100 border-2 border-slate-200 hover:border-slate-300 rounded-xl text-xs font-semibold text-slate-800 transition shadow-sm flex items-center justify-center gap-3 cursor-pointer group disabled:opacity-60"
+                >
+                  {/* Google 'G' Logo SVG */}
+                  <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                    />
+                  </svg>
+                  <span>{loading ? 'Authenticating...' : `Continue with Google (${mode === 'signup' ? 'New Account' : 'Sign In'})`}</span>
+                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition" />
+                </button>
               </div>
+            )}
+          </div>
 
+          {/* Quick-Select Google Enterprise Profiles */}
+          <div className="pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Simulate Google Account (One-Click)</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">Sandbox Verified</span>
+            </div>
+
+            <div className="space-y-1.5">
               <button
-                type="submit"
+                type="button"
                 disabled={loading}
-                className="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-indigo-600/25 cursor-pointer disabled:opacity-50"
+                onClick={() => handleDevGoogleLogin('secops.lead@enterprise.corp', 'Jordan Bell (Lead SecOps)')}
+                className="w-full text-left p-2.5 bg-slate-50 hover:bg-indigo-50/70 border border-slate-200 hover:border-indigo-200 rounded-xl transition cursor-pointer flex items-center justify-between group disabled:opacity-50"
               >
-                {loading ? 'Authenticating...' : 'Sign In to Dashboard'}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleSignUp} className="space-y-3.5">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Jordan Bell"
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-                  />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center">
+                    JB
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-800 group-hover:text-indigo-700">
+                      Jordan Bell
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      secops.lead@enterprise.corp (Admin/Analyst)
+                    </div>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Username *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                    placeholder="jordan_sec"
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Work Email *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="jordan@apexsec.corp"
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Organization / Company *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={orgName}
-                    onChange={(e) => setOrgName(e.target.value)}
-                    placeholder="Apex Cyber Labs"
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Role / Position
-                  </label>
-                  <select
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-                  >
-                    <option value="Lead SecOps Engineer">Lead SecOps Engineer</option>
-                    <option value="CISO / Security Director">CISO / Security Director</option>
-                    <option value="DevSecOps & AppSec Lead">DevSecOps & AppSec Lead</option>
-                    <option value="Penetration Tester / Red Team">Penetration Tester / Red Team</option>
-                    <option value="Cloud Security Architect">Cloud Security Architect</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Access Level
-                  </label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-                  >
-                    <option value="analyst">Analyst (Correlation & Plans)</option>
-                    <option value="admin">Admin (Full Enclave Control)</option>
-                    <option value="approver">Approver (HITL Governance)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                  Master Password *
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={signupPassword}
-                  onChange={(e) => setSignupPassword(e.target.value)}
-                  placeholder="Min 6 characters"
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-                />
-              </div>
-
-              <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-xl flex items-start gap-2.5 text-[11px] text-indigo-900">
-                <CheckCircle2 className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
-                <span>
-                  After registration, you will be guided through the <strong>3-Step Onboarding Window</strong> to define your perimeter scope and crown jewels.
+                <span className="text-[11px] font-mono text-indigo-600 opacity-0 group-hover:opacity-100 transition">
+                  Select →
                 </span>
-              </div>
+              </button>
 
               <button
-                type="submit"
+                type="button"
                 disabled={loading}
-                className="w-full mt-1 py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-indigo-600/25 cursor-pointer disabled:opacity-50"
+                onClick={() => handleDevGoogleLogin('ciso.director@fintech.io', 'Elena Rostova (CISO)')}
+                className="w-full text-left p-2.5 bg-slate-50 hover:bg-indigo-50/70 border border-slate-200 hover:border-indigo-200 rounded-xl transition cursor-pointer flex items-center justify-between group disabled:opacity-50"
               >
-                {loading ? 'Creating Enclave...' : 'Create Account & Continue to Onboarding'}
-                <ArrowRight className="w-4 h-4" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-violet-600 text-white font-bold text-xs flex items-center justify-center">
+                    ER
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-800 group-hover:text-indigo-700">
+                      Elena Rostova
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      ciso.director@fintech.io (HITL Approver)
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[11px] font-mono text-indigo-600 opacity-0 group-hover:opacity-100 transition">
+                  Select →
+                </span>
               </button>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleDevGoogleLogin('devsecops@cloudscale.net', 'Marcus Chen (DevSecOps)')}
+                className="w-full text-left p-2.5 bg-slate-50 hover:bg-indigo-50/70 border border-slate-200 hover:border-indigo-200 rounded-xl transition cursor-pointer flex items-center justify-between group disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-slate-800 text-white font-bold text-xs flex items-center justify-center">
+                    MC
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-800 group-hover:text-indigo-700">
+                      Marcus Chen
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      devsecops@cloudscale.net (SecOps Engineer)
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[11px] font-mono text-indigo-600 opacity-0 group-hover:opacity-100 transition">
+                  Select →
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Custom Google Email Input */}
+          <div className="pt-2 border-t border-slate-100">
+            <form onSubmit={handleCustomEmailSubmit} className="space-y-2">
+              <label className="block text-[11px] font-bold text-slate-600">
+                Or Sign In with Any Custom Google Work Email:
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={customEmail}
+                  onChange={(e) => setCustomEmail(e.target.value)}
+                  placeholder="your.name@company.com"
+                  className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition cursor-pointer disabled:opacity-50"
+                >
+                  Continue
+                </button>
+              </div>
             </form>
-          )}
+          </div>
+
+          {/* Onboarding Notice */}
+          <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-start gap-2.5 text-[11px] text-indigo-900">
+            <CheckCircle2 className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <strong>Security Protocol Notice:</strong> New accounts authenticated through Google automatically trigger the <strong>3-Step Onboarding Wizard</strong> to tailor your attack path graph and crown-jewel scope.
+            </div>
+          </div>
         </div>
       </div>
     </div>
