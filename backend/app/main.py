@@ -94,23 +94,26 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware — supports Vercel deployments, custom domains, and local dev
-_frontend_url = os.environ.get("FRONTEND_URL", "").strip().rstrip("/")
+# CORS middleware — explicitly wired for Vercel production + preview deployments
+_frontend_url = os.environ.get("FRONTEND_URL", "https://chained-risk.vercel.app").strip().rstrip("/")
 _cors_origins = [
+    "https://chained-risk.vercel.app",
+    "https://chainedrisk.onrender.com",
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
 ]
-if _frontend_url:
+if _frontend_url and _frontend_url not in _cors_origins:
     _cors_origins.append(_frontend_url)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
-    allow_origin_regex=r"https?://.*",
+    allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.onrender\.com|https?://localhost(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 @app.middleware("http")

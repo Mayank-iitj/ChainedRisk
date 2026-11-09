@@ -378,7 +378,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="url"
                       value={customApiUrl}
                       onChange={(e) => setCustomApiUrl(e.target.value)}
-                      placeholder="https://chainedrisk-api.onrender.com"
+                      placeholder="https://chainedrisk.onrender.com"
                       className="flex-1 bg-[#1C1E24] border border-[#333640] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-neutral-500 outline-none focus:border-[#FBBF24]"
                     />
                     <button

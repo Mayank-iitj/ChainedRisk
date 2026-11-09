@@ -12,6 +12,8 @@ import {
   PolicyRule
 } from './types';
 
+export const PRODUCTION_RENDER_BACKEND = 'https://chainedrisk.onrender.com';
+
 export function getApiOrigin(): string {
   // 1. Explicit user override stored in localStorage
   const stored = localStorage.getItem('cr_backend_url');
@@ -19,7 +21,7 @@ export function getApiOrigin(): string {
     return stored.trim().replace(/\/+$/, '');
   }
 
-  // 2. Runtime injected config (from docker-entrypoint /runtime-config.js)
+  // 2. Runtime injected config (from /runtime-config.js)
   const runtimeBackend = (window as any).__RUNTIME_CONFIG__?.BACKEND_URL;
   if (runtimeBackend && runtimeBackend.trim() && !runtimeBackend.includes('127.0.0.1') && !runtimeBackend.includes('localhost')) {
     return runtimeBackend.trim().replace(/\/+$/, '');
@@ -31,7 +33,15 @@ export function getApiOrigin(): string {
     return rawApiUrl.startsWith('http') ? rawApiUrl.replace(/\/+$/, '') : `https://${rawApiUrl.replace(/\/+$/, '')}`;
   }
 
-  // 4. Default to same origin (relative path)
+  // 4. In production (e.g. chained-risk.vercel.app), default directly to live Render backend
+  if (typeof window !== 'undefined' && window.location) {
+    const host = window.location.hostname;
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return PRODUCTION_RENDER_BACKEND;
+    }
+  }
+
+  // 5. Default to same origin (for local Vite dev proxy)
   return '';
 }
 
