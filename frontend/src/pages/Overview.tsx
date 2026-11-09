@@ -24,6 +24,7 @@ interface OverviewProps {
   loading: boolean;
   projectName?: string;
   orgName?: string;
+  onNavigateTab?: (tab: string) => void;
 }
 
 export const Overview: React.FC<OverviewProps> = ({
@@ -33,7 +34,8 @@ export const Overview: React.FC<OverviewProps> = ({
   onLoadDemo,
   loading,
   projectName,
-  orgName
+  orgName,
+  onNavigateTab
 }) => {
   const [timeFilter, setTimeFilter] = React.useState<'all' | '1m' | '6m' | '1y'>('all');
   const [tableFilter, setTableFilter] = React.useState<'all' | 'active' | 'verified'>('all');
@@ -47,20 +49,21 @@ export const Overview: React.FC<OverviewProps> = ({
     return true;
   });
 
-  const labAssets = stats?.target_assets && stats.target_assets.length > 0
-    ? stats.target_assets
-    : [
-        { id: 'ast_app', name: 'app.lab (DMZ)', tech: 'Flask / Python', progress: 85, color: '#ef4444', status: 'Exposed .git + SSRF' },
-        { id: 'ast_redis', name: 'redis.lab (INTERNAL)', tech: 'Redis 7.0', progress: 95, color: '#8b5cf6', status: 'No Authentication' },
-        { id: 'ast_git', name: 'git.lab (INTERNAL)', tech: 'Nginx 1.27', progress: 40, color: '#06b6d4', status: 'Decoy Git Host' }
-      ];
+  const labAssets = stats?.target_assets || [];
+  const crownJewels = stats?.crown_jewels || [];
 
-  const crownJewels = stats?.crown_jewels && stats.crown_jewels.length > 0
-    ? stats.crown_jewels
-    : [
-        { name: 'redis.lab', id: '#ast_redis', tag: 'Synthetic DB', ip: '10.77.0.12' },
-        { name: 'git.lab', id: '#ast_git', tag: 'Decoy SCM', ip: '10.77.0.11' }
-      ];
+  const getPivotTarget = (chain: AttackChain) => {
+    if (chain.steps && chain.steps.length > 0) {
+      const lastStep = chain.steps[chain.steps.length - 1];
+      if (lastStep.narrative) {
+        if (lastStep.narrative.toLowerCase().includes('redis')) return 'redis.lab (Internal)';
+        if (lastStep.narrative.toLowerCase().includes('git')) return 'git.lab (SCM)';
+        if (lastStep.narrative.toLowerCase().includes('sql') || lastStep.narrative.toLowerCase().includes('database')) return 'db.internal';
+        if (lastStep.narrative.toLowerCase().includes('ssrf')) return 'ssrf-proxy (DMZ)';
+      }
+    }
+    return 'Internal Subnet';
+  };
 
   return (
     <div className="space-y-6 pb-8">
@@ -260,46 +263,59 @@ export const Overview: React.FC<OverviewProps> = ({
             <span className="text-[#475569]">
               Correlation Insight: Isolated Low/Medium alerts surge to <strong className="text-[#ef4444]">Critical {topChain?.score ?? 90}</strong> when chained through the SSRF pivot.
             </span>
-            <span className="font-bold text-[#6366f1] cursor-pointer hover:underline">
+            <button
+              onClick={() => onNavigateTab ? onNavigateTab('chains') : onSelectChain(topChain?.id || '')}
+              className="font-bold text-[#6366f1] hover:underline cursor-pointer text-xs"
+            >
               Inspect Attack Tree →
-            </span>
+            </button>
           </div>
         </div>
 
-        {/* Right 1 Col: Active Target Assets (Active Project in screenshot) */}
+        {/* Right 1 Col: Active Target Assets */}
         <div className="bg-white border border-[#eef2f6] rounded-2xl p-6 shadow-card space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-extrabold text-[#0f172a]">Active Lab Assets</h3>
-            <button className="text-[#94a3b8] hover:text-[#0f172a]">
-              <MoreVertical className="w-4 h-4" />
-            </button>
+            <span className="text-[11px] font-mono text-[#64748b]">{labAssets.length} Total</span>
           </div>
 
           <div className="space-y-4">
-            {labAssets.map((item, idx) => (
-              <div key={item.id || idx} className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></span>
-                    <span className="font-bold text-[#0f172a]">{item.name}</span>
-                  </div>
-                  <span className="text-[11px] font-mono text-[#64748b]">{item.progress}%</span>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-[#f1f5f9] h-2 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${item.progress}%`, backgroundColor: item.color }}
-                  ></div>
-                </div>
-
-                <div className="flex justify-between text-[10px] text-[#94a3b8]">
-                  <span>{item.tech}</span>
-                  <span className="font-mono">{item.status}</span>
-                </div>
+            {labAssets.length === 0 ? (
+              <div className="py-8 text-center text-[#64748b] space-y-2">
+                <p className="text-xs">No assets mapped yet in this project.</p>
+                <button
+                  onClick={() => onNavigateTab ? onNavigateTab('ingest') : onLoadDemo()}
+                  className="text-xs text-[#6366f1] font-bold hover:underline cursor-pointer"
+                >
+                  Ingest Scans in Ingest Studio →
+                </button>
               </div>
-            ))}
+            ) : (
+              labAssets.map((item, idx) => (
+                <div key={item.id || idx} className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></span>
+                      <span className="font-bold text-[#0f172a]">{item.name}</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-[#64748b]">{item.progress}%</span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="w-full bg-[#f1f5f9] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${item.progress}%`, backgroundColor: item.color }}
+                    ></div>
+                  </div>
+
+                  <div className="flex justify-between text-[10px] text-[#94a3b8]">
+                    <span>{item.tech}</span>
+                    <span className="font-mono">{item.status}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -365,7 +381,7 @@ export const Overview: React.FC<OverviewProps> = ({
                       <td className="py-3 px-3 font-bold text-[#0f172a] max-w-[200px] truncate">
                         {chain.title}
                       </td>
-                      <td className="py-3 px-3 font-mono text-[#64748b]">redis.lab</td>
+                      <td className="py-3 px-3 font-mono text-[#64748b]">{getPivotTarget(chain)}</td>
                       <td className="py-3 px-3 font-semibold text-[#6366f1]">+{chain.chain_gain} Pts</td>
                       <td className="py-3 px-3 font-black text-[#0f172a]">{chain.score}</td>
                       <td className="py-3 px-3">
@@ -394,33 +410,38 @@ export const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        {/* Bottom Right 1 Col: Crown Jewels / High-Value Targets (Top Customer in screenshot) */}
+        {/* Bottom Right 1 Col: Crown Jewels / High-Value Targets */}
         <div className="bg-white border border-[#eef2f6] rounded-2xl p-6 shadow-card space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-extrabold text-[#0f172a]">Crown Jewel Targets</h3>
-            <button className="text-[#94a3b8] hover:text-[#0f172a]">
-              <MoreVertical className="w-4 h-4" />
-            </button>
+            <span className="text-[11px] font-mono text-[#64748b]">{crownJewels.length} Identified</span>
           </div>
 
           <div className="space-y-3">
-            {crownJewels.map((target, idx) => (
-              <div key={target.id || idx} className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f8fafc] transition">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#f1f5f9] text-[#6366f1] font-bold flex items-center justify-center text-xs">
-                    {target.name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="font-bold text-[#0f172a] text-xs">{target.name}</div>
-                    <div className="text-[10px] text-[#94a3b8] font-mono">{target.id} • {target.ip}</div>
-                  </div>
-                </div>
-
-                <span className="bg-[#fef2f2] text-[#ef4444] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#fecaca]">
-                  {target.tag}
-                </span>
+            {crownJewels.length === 0 ? (
+              <div className="py-8 text-center text-[#64748b] space-y-1">
+                <p className="text-xs">No crown jewel datastores identified.</p>
+                <p className="text-[10px] text-slate-400">Datastores and internal crown jewels will be automatically mapped here.</p>
               </div>
-            ))}
+            ) : (
+              crownJewels.map((target, idx) => (
+                <div key={target.id || idx} className="flex items-center justify-between p-2 rounded-xl hover:bg-[#f8fafc] transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#f1f5f9] text-[#6366f1] font-bold flex items-center justify-center text-xs">
+                      {target.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-bold text-[#0f172a] text-xs">{target.name}</div>
+                      <div className="text-[10px] text-[#94a3b8] font-mono">{target.id} • {target.ip}</div>
+                    </div>
+                  </div>
+
+                  <span className="bg-[#fef2f2] text-[#ef4444] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#fecaca]">
+                    {target.tag}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

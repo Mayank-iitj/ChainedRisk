@@ -38,10 +38,20 @@ export const Ingest: React.FC<IngestProps> = ({ projectId, onIngestSuccess }) =>
     formData.append('stage', selectedStage);
 
     try {
+      const token = localStorage.getItem('cr_auth_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const res = await fetch(`/api/v1/projects/${projectId}/ingest`, {
         method: 'POST',
+        headers,
         body: formData,
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `Upload failed with status ${res.status}`);
+      }
       const data = await res.json();
       setReport(data.result);
       onIngestSuccess();

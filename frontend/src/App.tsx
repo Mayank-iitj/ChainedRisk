@@ -350,6 +350,7 @@ export const App: React.FC = () => {
               }}
               onLoadDemo={handleLoadDemo}
               loading={loading}
+              onNavigateTab={setCurrentTab}
             />
           )}
 
