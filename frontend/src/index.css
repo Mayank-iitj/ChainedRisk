@@ -5,27 +5,28 @@
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #f4f6fa;
-    color: #1e293b;
+    background-color: #0B0F14;
+    color: #F1F5F9;
   }
   code, pre, .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
 }
 
-/* Custom scrollbar */
+/* Custom dark scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: #0B0F14;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #1F2A37;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #374151;
 }
 
 /* Scroll reveal motion */

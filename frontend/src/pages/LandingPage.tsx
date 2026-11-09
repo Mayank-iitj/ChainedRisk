@@ -605,7 +605,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Staggered Rising Headline + Interactive CrystalizedBall Orb */}
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div className="flex-1">
-              <h1 className="text-[clamp(2.75rem,8.5vw,9.5rem)] leading-[0.92] font-light tracking-[-0.04em] text-white py-1">
+              <h1 className="text-[clamp(2.5rem,8vw,9.5rem)] leading-[0.95] font-light tracking-[-0.04em] text-white py-1 select-none">
                 {wordTokens.map((wt, wIdx) => (
                   <span key={wIdx} className="inline-block whitespace-nowrap mr-[0.28em] last:mr-0 overflow-hidden py-1">
                     {wt.chars.map(({ char, index }) => (

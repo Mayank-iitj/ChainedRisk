@@ -26,16 +26,16 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
           selector: 'node',
           style: {
             'label': 'data(label)',
-            'color': '#334155',
-            'font-size': '11px',
-            'font-family': 'JetBrains Mono, Inter, sans-serif',
+            'color': '#94A3B8',
+            'font-size': '10px',
+            'font-family': 'JetBrains Mono, monospace',
             'text-valign': 'bottom',
             'text-margin-y': 6,
-            'background-color': '#f8fafc',
-            'border-width': 2,
-            'border-color': '#94a3b8',
-            'width': 36,
-            'height': 36
+            'background-color': '#121821',
+            'border-width': 1.5,
+            'border-color': '#334155',
+            'width': 34,
+            'height': 34
           }
         },
         // Asset Hosts
@@ -43,11 +43,12 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
           selector: 'node[type = "Host"]',
           style: {
             'shape': 'round-rectangle',
-            'background-color': '#ffffff',
-            'border-color': '#6366f1',
-            'border-width': 2.5,
-            'width': 44,
-            'height': 44
+            'background-color': '#161F2E',
+            'border-color': '#6366F1',
+            'border-width': 2,
+            'color': '#E2E8F0',
+            'width': 42,
+            'height': 42
           }
         },
         // Findings
@@ -55,40 +56,44 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
           selector: 'node[type = "Finding"]',
           style: {
             'shape': 'diamond',
-            'background-color': '#eef2ff',
-            'border-color': '#6366f1',
-            'width': 32,
-            'height': 32
+            'background-color': '#1E1B2E',
+            'border-color': '#818CF8',
+            'width': 30,
+            'height': 30
           }
         },
         // Severity colored findings
         {
           selector: 'node[severity = "critical"]',
           style: {
-            'background-color': '#fee2e2',
-            'border-color': '#ef4444',
-            'border-width': 3
+            'background-color': '#2A1215',
+            'border-color': '#EF4444',
+            'color': '#FCA5A5',
+            'border-width': 2.5
           }
         },
         {
           selector: 'node[severity = "high"]',
           style: {
-            'background-color': '#ffedd5',
-            'border-color': '#f97316'
+            'background-color': '#2A1B12',
+            'border-color': '#F97316',
+            'color': '#FDBA74'
           }
         },
         {
           selector: 'node[severity = "medium"]',
           style: {
-            'background-color': '#fef3c7',
-            'border-color': '#f59e0b'
+            'background-color': '#2A2412',
+            'border-color': '#F59E0B',
+            'color': '#FCD34D'
           }
         },
         {
           selector: 'node[severity = "low"]',
           style: {
-            'background-color': '#e0f2fe',
-            'border-color': '#0ea5e9'
+            'background-color': '#0F232E',
+            'border-color': '#06B6D4',
+            'color': '#67E8F9'
           }
         },
         // Capabilities
@@ -96,8 +101,9 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
           selector: 'node[type = "Capability"]',
           style: {
             'shape': 'ellipse',
-            'background-color': '#ecfdf5',
-            'border-color': '#10b981',
+            'background-color': '#0F261E',
+            'border-color': '#10B981',
+            'color': '#6EE7B7',
             'width': 28,
             'height': 28
           }
@@ -107,8 +113,8 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
           selector: 'edge',
           style: {
             'width': 1.5,
-            'line-color': '#cbd5e1',
-            'target-arrow-color': '#cbd5e1',
+            'line-color': '#334155',
+            'target-arrow-color': '#475569',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
             'arrow-scale': 0.8
@@ -118,10 +124,10 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
         {
           selector: 'edge[derived = true]',
           style: {
-            'line-color': '#6366f1',
-            'target-arrow-color': '#6366f1',
+            'line-color': '#6366F1',
+            'target-arrow-color': '#818CF8',
             'line-style': 'dashed',
-            'width': 2.5,
+            'width': 2,
             'line-dash-pattern': [6, 4]
           }
         },
@@ -129,11 +135,11 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
         {
           selector: ':selected',
           style: {
-            'border-color': '#4f46e5',
+            'border-color': '#818CF8',
             'border-width': 3,
-            'shadow-blur': 10,
-            'shadow-color': '#6366f1',
-            'shadow-opacity': 0.4
+            'shadow-blur': 12,
+            'shadow-color': '#6366F1',
+            'shadow-opacity': 0.6
           } as any
         }
       ],
@@ -172,87 +178,87 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
   };
 
   return (
-    <div className="relative w-full h-full min-h-[500px] bg-white border border-slate-200/80 rounded-2xl overflow-hidden flex flex-col shadow-sm">
+    <div className="relative w-full h-full min-h-[500px] bg-[#0B0F14] border border-[#1F2A37] rounded-xl overflow-hidden flex flex-col">
       {/* Controls Bar */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-white/95 border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm backdrop-blur-xs">
+      <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-[#121821]/90 border border-[#1F2A37] px-2.5 py-1.5 rounded-lg shadow-lg backdrop-blur-md">
         <button
           onClick={handleZoomIn}
-          className="p-1 hover:text-indigo-600 text-slate-500 transition cursor-pointer"
+          className="p-1 hover:text-indigo-400 text-slate-400 transition cursor-pointer"
           title="Zoom In"
         >
-          <ZoomIn className="w-4 h-4" />
+          <ZoomIn className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={handleZoomOut}
-          className="p-1 hover:text-indigo-600 text-slate-500 transition cursor-pointer"
+          className="p-1 hover:text-indigo-400 text-slate-400 transition cursor-pointer"
           title="Zoom Out"
         >
-          <ZoomOut className="w-4 h-4" />
+          <ZoomOut className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={handleFit}
-          className="p-1 hover:text-indigo-600 text-slate-500 transition cursor-pointer"
+          className="p-1 hover:text-indigo-400 text-slate-400 transition cursor-pointer"
           title="Fit Screen"
         >
-          <Maximize2 className="w-4 h-4" />
+          <Maximize2 className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={handleRelayout}
-          className="p-1 hover:text-indigo-600 text-slate-500 transition cursor-pointer"
+          className="p-1 hover:text-indigo-400 text-slate-400 transition cursor-pointer"
           title="Reorganize Layout"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 z-10 bg-white/95 border border-slate-200 px-3.5 py-2.5 rounded-xl text-[11px] font-mono text-slate-600 shadow-sm backdrop-blur-xs space-y-1.5">
+      <div className="absolute bottom-4 left-4 z-10 bg-[#121821]/90 border border-[#1F2A37] px-3 py-2 rounded-lg text-[10px] font-mono text-slate-400 shadow-lg backdrop-blur-md space-y-1.5">
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded bg-white border-2 border-indigo-500"></span>
+          <span className="w-2.5 h-2.5 rounded bg-[#161F2E] border border-indigo-500"></span>
           <span>Asset (Host/Container)</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rotate-45 bg-rose-50 border border-rose-500"></span>
+          <span className="w-2.5 h-2.5 rotate-45 bg-[#2A1215] border border-red-500"></span>
           <span>Scanner Finding</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-emerald-50 border border-emerald-500"></span>
+          <span className="w-2.5 h-2.5 rounded-full bg-[#0F261E] border border-emerald-500"></span>
           <span>Capability Token</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-4 h-0.5 border-b-2 border-indigo-500 border-dashed"></span>
-          <span>Derived SSRF Pivot Edge</span>
+          <span className="w-4 h-0.5 border-b border-indigo-400 border-dashed"></span>
+          <span>Derived Pivot Edge</span>
         </div>
       </div>
 
       {/* Canvas */}
-      <div ref={containerRef} className="flex-1 w-full h-full cursor-grab active:cursor-grabbing bg-slate-50/30" />
+      <div ref={containerRef} className="flex-1 w-full h-full cursor-grab active:cursor-grabbing bg-[#0B0F14]" />
 
       {/* Node Inspector Drawer */}
       {selectedNode && (
-        <div className="absolute top-4 right-4 z-10 w-80 bg-white border border-slate-200 rounded-2xl p-5 shadow-xl text-xs space-y-3 max-h-[90%] overflow-y-auto">
-          <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-            <span className="font-mono text-indigo-600 font-bold uppercase">{selectedNode.type} Node</span>
+        <div className="absolute top-4 right-4 z-10 w-80 bg-[#121821]/95 border border-[#1F2A37] rounded-xl p-4 shadow-2xl text-xs space-y-3 max-h-[90%] overflow-y-auto backdrop-blur-md">
+          <div className="flex justify-between items-center border-b border-[#1F2A37] pb-2">
+            <span className="font-mono text-indigo-400 font-bold uppercase text-[11px] tracking-wider">{selectedNode.type} Node</span>
             <button
               onClick={() => setSelectedNode(null)}
-              className="text-slate-400 hover:text-slate-700"
+              className="text-slate-400 hover:text-slate-200 cursor-pointer"
             >
               ✕
             </button>
           </div>
           <div>
-            <div className="text-slate-800 font-bold text-sm">{selectedNode.label}</div>
-            <div className="text-slate-400 font-mono text-[11px]">ID: {selectedNode.id}</div>
+            <div className="text-slate-100 font-bold text-sm">{selectedNode.label}</div>
+            <div className="text-slate-400 font-mono text-[10px] mt-0.5">ID: {selectedNode.id}</div>
           </div>
 
           {selectedNode.severity && (
             <div>
-              <span className="text-slate-400 block font-mono text-[10px]">Severity</span>
-              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                selectedNode.severity === 'critical' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                selectedNode.severity === 'high' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
-                selectedNode.severity === 'medium' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                'bg-sky-50 text-sky-700 border border-sky-200'
+              <span className="text-slate-400 block font-mono text-[10px] uppercase">Severity</span>
+              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase mt-1 ${
+                selectedNode.severity === 'critical' ? 'bg-red-950/60 text-red-300 border border-red-800/80' :
+                selectedNode.severity === 'high' ? 'bg-amber-950/60 text-amber-300 border border-amber-800/80' :
+                selectedNode.severity === 'medium' ? 'bg-yellow-950/60 text-yellow-300 border border-yellow-800/80' :
+                'bg-cyan-950/60 text-cyan-300 border border-cyan-800/80'
               }`}>
                 {selectedNode.severity}
               </span>
@@ -261,15 +267,15 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
 
           {selectedNode.zone && (
             <div>
-              <span className="text-slate-400 block font-mono text-[10px]">Zone</span>
-              <span className="text-slate-700 font-mono font-medium">{selectedNode.zone}</span>
+              <span className="text-slate-400 block font-mono text-[10px] uppercase">Zone</span>
+              <span className="text-slate-200 font-mono text-xs">{selectedNode.zone}</span>
             </div>
           )}
 
           {selectedNode.stage && (
             <div>
-              <span className="text-slate-400 block font-mono text-[10px]">Assessment Stage</span>
-              <span className="text-slate-700 font-mono capitalize">{selectedNode.stage}</span>
+              <span className="text-slate-400 block font-mono text-[10px] uppercase">Stage</span>
+              <span className="text-slate-200 font-mono text-xs capitalize">{selectedNode.stage}</span>
             </div>
           )}
         </div>

@@ -63,27 +63,35 @@ export const Ingest: React.FC<IngestProps> = ({ projectId, onIngestSuccess }) =>
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8 select-none">
       {/* Header */}
       <div className="reveal-block">
-        <h2 className="text-xl font-bold text-slate-800 tracking-tight">Ingest Assessment Artifacts</h2>
-        <p className="text-xs text-slate-500 mt-1">
+        <div className="text-[11px] font-mono tracking-wider text-[#64748B] uppercase">
+          <span className="text-[#6366F1] font-semibold">NORMALIZATION ENGINE</span> // SCAN INGESTION
+        </div>
+        <h2 className="text-xl font-bold text-white tracking-tight mt-0.5 flex items-center gap-2">
+          <UploadCloud className="w-5 h-5 text-[#6366F1]" />
+          <span>Ingest Assessment Artifacts</span>
+        </h2>
+        <p className="text-xs text-[#64748B] mt-0.5 font-mono">
           Upload raw tool exports. ChainedRisk normalizes findings, resolves canonical assets, extracts preconditions/postconditions, and maps attack capabilities.
         </p>
       </div>
 
       {/* Tool Selector Chips */}
-      <div className="reveal-block bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-3">
-        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">SOURCE TOOL PARSER</label>
+      <div className="reveal-block bg-[#121821] border border-[#1F2A37] rounded-xl p-5 shadow-card space-y-3 font-mono">
+        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+          SOURCE TOOL PARSER
+        </label>
         <div className="flex flex-wrap gap-2">
           {tools.map((t) => (
             <button
               key={t.id}
               onClick={() => setSelectedTool(t.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono transition cursor-pointer ${
                 selectedTool === t.id
-                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                  ? 'bg-[#6366F1] text-white font-bold shadow-glow-indigo'
+                  : 'bg-[#0B0F14] text-slate-400 border border-[#1F2A37] hover:text-white'
               }`}
             >
               {t.label}
@@ -93,17 +101,21 @@ export const Ingest: React.FC<IngestProps> = ({ projectId, onIngestSuccess }) =>
       </div>
 
       {/* Drag & Drop Area */}
-      <div className="reveal-block border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl p-12 bg-white/70 text-center transition flex flex-col items-center justify-center space-y-4 shadow-sm">
-        <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm">
-          <UploadCloud className="w-8 h-8" />
+      <div className="reveal-block border-2 border-dashed border-[#1F2A37] hover:border-[#6366F1] rounded-xl p-12 bg-[#121821]/60 text-center transition flex flex-col items-center justify-center space-y-4 shadow-card">
+        <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-inner">
+          <UploadCloud className="w-6 h-6" />
         </div>
         <div>
-          <h3 className="text-base font-bold text-slate-800">Drop assessment scan files or click to browse</h3>
-          <p className="text-xs text-slate-500 mt-1">Supports Nmap XML, Nuclei JSONL, HTTPX, Gitleaks, CSV, or demo JSON</p>
+          <h3 className="text-sm font-bold text-white font-mono uppercase">
+            Drop assessment scan files or click to browse
+          </h3>
+          <p className="text-xs text-slate-400 mt-1 font-mono">
+            Supports Nmap XML, Nuclei JSONL, HTTPX, Gitleaks, CSV, or demo scenario JSON
+          </p>
         </div>
 
-        <label className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-2.5 rounded-xl text-xs tracking-wider shadow-sm shadow-indigo-600/25 transition cursor-pointer">
-          <span>SELECT FILES</span>
+        <label className="bg-[#6366F1] hover:bg-[#4F46E5] text-white font-mono font-bold px-5 py-2.5 rounded-xl text-xs tracking-wider shadow-glow-indigo transition cursor-pointer">
+          <span>SELECT ARTIFACT FILES</span>
           <input
             type="file"
             multiple
@@ -114,7 +126,7 @@ export const Ingest: React.FC<IngestProps> = ({ projectId, onIngestSuccess }) =>
         </label>
 
         {uploading && (
-          <div className="text-xs font-medium text-indigo-600 animate-pulse flex items-center gap-2">
+          <div className="text-xs font-mono text-cyan-400 animate-pulse flex items-center gap-2 pt-2">
             <Cpu className="w-4 h-4 animate-spin" />
             Normalizing findings and redacting secrets...
           </div>
@@ -123,28 +135,28 @@ export const Ingest: React.FC<IngestProps> = ({ projectId, onIngestSuccess }) =>
 
       {/* Ingest Result Report */}
       {report && (
-        <div className="reveal-block bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            <span>Ingestion & Normalization Complete</span>
+        <div className="reveal-block bg-[#121821] border border-emerald-500/30 rounded-xl p-6 shadow-card space-y-4 font-mono">
+          <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <span className="uppercase">Ingestion & Normalization Complete</span>
           </div>
 
-          <div className="grid grid-cols-4 gap-4 text-xs font-mono">
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-              <span className="text-slate-500 block text-[10px]">PARSED FINDINGS</span>
-              <span className="text-slate-800 text-base font-bold">{report.findings_created}</span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div className="bg-[#0B0F14] p-3 rounded-lg border border-[#1F2A37]">
+              <span className="text-slate-500 block text-[10px] uppercase">PARSED FINDINGS</span>
+              <span className="text-white text-base font-bold">{report.findings_created}</span>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-              <span className="text-slate-500 block text-[10px]">NEW ASSETS</span>
-              <span className="text-slate-800 text-base font-bold">{report.assets_created}</span>
+            <div className="bg-[#0B0F14] p-3 rounded-lg border border-[#1F2A37]">
+              <span className="text-slate-500 block text-[10px] uppercase">NEW ASSETS</span>
+              <span className="text-white text-base font-bold">{report.assets_created}</span>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-              <span className="text-slate-500 block text-[10px]">DUPLICATES DISCARDED</span>
-              <span className="text-slate-800 text-base font-bold">{report.duplicates_skipped ?? report.duplicates ?? 0}</span>
+            <div className="bg-[#0B0F14] p-3 rounded-lg border border-[#1F2A37]">
+              <span className="text-slate-500 block text-[10px] uppercase">DUPLICATES DEDUPLICATED</span>
+              <span className="text-white text-base font-bold">{report.duplicates}</span>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-              <span className="text-slate-500 block text-[10px]">SECRETS REDACTED</span>
-              <span className="text-indigo-600 text-base font-bold">{report.secrets_redacted_count ?? report.secrets_redacted ?? 0}</span>
+            <div className="bg-[#0B0F14] p-3 rounded-lg border border-[#1F2A37]">
+              <span className="text-slate-500 block text-[10px] uppercase">TOTAL FILES</span>
+              <span className="text-white text-base font-bold">{report.files}</span>
             </div>
           </div>
         </div>

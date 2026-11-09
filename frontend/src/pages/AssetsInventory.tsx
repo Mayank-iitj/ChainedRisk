@@ -12,7 +12,8 @@ import {
   Database,
   Globe,
   Radio,
-  Cpu
+  Cpu,
+  X
 } from 'lucide-react';
 import { AssetItem } from '../types';
 import { fetchAssets, createAsset, deleteAsset } from '../api';
@@ -52,7 +53,7 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
     try {
       const zoneParam = selectedZone === 'all' ? undefined : selectedZone;
       const data = await fetchAssets(projectId, zoneParam);
-      setAssets(data);
+      setAssets(data || []);
     } catch (err: any) {
       console.error('Failed to load assets:', err);
     } finally {
@@ -122,28 +123,28 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
   });
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 select-none">
       {/* Header */}
       <div className="reveal-block flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="text-xs font-semibold text-[#64748b]">
-            <span className="text-[#6366f1] font-bold">Attack Surface</span> / Perimeter Inventory
+          <div className="text-[11px] font-mono tracking-wider text-[#64748B] uppercase">
+            <span className="text-[#6366F1] font-semibold">ATTACK SURFACE</span> // PERIMETER INVENTORY
           </div>
-          <h2 className="text-xl font-extrabold text-[#0f172a] tracking-tight mt-0.5 flex items-center gap-2">
-            <Server className="w-5 h-5 text-[#6366f1]" />
+          <h2 className="text-xl font-bold text-white tracking-tight mt-0.5 flex items-center gap-2">
+            <Server className="w-5 h-5 text-[#6366F1]" />
             <span>Asset Inventory & Network Zones</span>
-            <span className="bg-[#ede9fe] text-[#6366f1] border border-[#ddd6fe] text-xs font-bold font-mono px-2.5 py-0.5 rounded-full ml-1">
+            <span className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full ml-1">
               {assets.length} Assets
             </span>
           </h2>
-          <p className="text-xs text-[#64748b] mt-0.5">
+          <p className="text-xs text-[#64748B] mt-0.5 font-mono">
             DMZ endpoints, internal pivot nodes, and high-value crown jewel datastores mapped into the correlation graph.
           </p>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md shadow-[#6366f1]/25 transition cursor-pointer"
+          className="flex items-center gap-2 bg-[#6366F1] hover:bg-[#4F46E5] text-white font-mono font-bold px-4 py-2 rounded-xl text-xs shadow-glow-indigo transition cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>ADD PERIMETER ASSET</span>
@@ -151,17 +152,17 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
       </div>
 
       {/* Filter Chips Bar */}
-      <div className="reveal-block bg-white border border-[#eef2f6] rounded-2xl p-4 shadow-card flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="reveal-block bg-[#121821] border border-[#1F2A37] rounded-xl p-4 shadow-card flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Zone:</span>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-1">Zone:</span>
           {(['all', 'dmz', 'internal', 'lab', 'external'] as const).map((z) => (
             <button
               key={z}
               onClick={() => setSelectedZone(z)}
-              className={`px-3 py-1.5 rounded-xl font-semibold capitalize transition cursor-pointer text-xs ${
+              className={`px-3 py-1 rounded-lg uppercase text-[10px] transition cursor-pointer ${
                 selectedZone === z
-                  ? 'bg-[#6366f1] text-white shadow-sm'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                  ? 'bg-[#6366F1] text-white font-bold'
+                  : 'bg-[#0B0F14] hover:text-white text-slate-400 border border-[#1F2A37]'
               }`}
             >
               {z === 'all' ? 'All Zones' : z.toUpperCase()}
@@ -170,32 +171,32 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
         </div>
 
         <div className="min-w-[240px] relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search by asset name, IP, type..."
+            placeholder="Search by name, IP, service..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-slate-800 text-xs placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-[#0B0F14] border border-[#1F2A37] rounded-lg pl-8 pr-3 py-1.5 text-white placeholder:text-[#64748B] focus:outline-none focus:border-[#6366F1] text-xs font-mono"
           />
         </div>
       </div>
 
       {/* Assets Grid / Table */}
-      <div className="reveal-block bg-white border border-[#eef2f6] rounded-2xl shadow-card overflow-hidden">
+      <div className="reveal-block bg-[#121821] border border-[#1F2A37] rounded-xl shadow-card overflow-hidden">
         {filteredAssets.length === 0 ? (
-          <div className="p-12 text-center text-[#64748b] space-y-3">
-            <Server className="w-10 h-10 text-slate-300 mx-auto" />
-            <h3 className="text-base font-bold text-slate-800">No perimeter assets found</h3>
-            <p className="text-xs max-w-sm mx-auto text-slate-500">
+          <div className="p-12 text-center text-slate-500 space-y-3 font-mono">
+            <Server className="w-10 h-10 text-slate-600 mx-auto" />
+            <h3 className="text-sm font-bold text-white uppercase">No perimeter assets found</h3>
+            <p className="text-xs max-w-sm mx-auto text-slate-400 font-sans">
               No assets matched the current zone filter. Add a new target asset or ingest network scan results.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs font-mono">
               <thead>
-                <tr className="bg-[#f8fafc] text-[#64748b] text-[11px] font-semibold border-b border-[#eef2f6]">
+                <tr className="bg-[#0B0F14] text-slate-400 text-[10px] uppercase tracking-wider border-b border-[#1F2A37]">
                   <th className="py-3 px-4">ASSET IDENTITY</th>
                   <th className="py-3 px-3">ZONE</th>
                   <th className="py-3 px-3">TYPE</th>
@@ -205,54 +206,54 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                   <th className="py-3 px-4 text-right">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#f8fafc]">
+              <tbody className="divide-y divide-[#1F2A37]">
                 {filteredAssets.map((asset) => {
                   const services = asset.props?.services || [];
                   const isJewel = (asset.props?.datastores && asset.props.datastores.length > 0) || asset.zone === 'internal';
                   return (
-                    <tr key={asset.id} className="hover:bg-[#f8fafc] transition">
+                    <tr key={asset.id} className="hover:bg-white/[0.02] transition">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
                             asset.zone === 'dmz'
-                              ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
                               : isJewel
-                              ? 'bg-purple-50 text-purple-600 border border-purple-200'
-                              : 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+                              ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                              : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
                           }`}>
                             {asset.zone === 'dmz' ? <Globe className="w-4 h-4" /> : isJewel ? <Database className="w-4 h-4" /> : <Server className="w-4 h-4" />}
                           </div>
                           <div>
-                            <div className="font-bold text-[#0f172a] text-xs flex items-center gap-1.5">
+                            <div className="font-semibold text-white text-xs flex items-center gap-1.5 font-mono">
                               <span>{asset.name}</span>
                               {isJewel && (
-                                <span className="bg-purple-100 text-purple-700 text-[9px] font-bold px-1.5 py-0.2 rounded">
+                                <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[9px] font-bold px-1.5 py-0.2 rounded">
                                   CROWN JEWEL
                                 </span>
                               )}
                             </div>
-                            <div className="text-[10px] text-slate-400 font-mono">{asset.id}</div>
+                            <div className="text-[10px] text-slate-500 font-mono">{asset.id}</div>
                           </div>
                         </div>
                       </td>
 
                       <td className="py-3.5 px-3">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
                           asset.zone === 'dmz'
-                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
                             : asset.zone === 'internal'
-                            ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                            : 'bg-slate-100 text-slate-700'
+                            ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/30'
+                            : 'bg-slate-800 text-slate-300 border border-slate-700'
                         }`}>
                           {asset.zone}
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-3 font-semibold text-slate-700">
+                      <td className="py-3.5 px-3 font-semibold text-slate-300">
                         {asset.type}
                       </td>
 
-                      <td className="py-3.5 px-3 font-mono text-slate-600 text-xs">
+                      <td className="py-3.5 px-3 text-cyan-300 text-xs">
                         {asset.props?.ip || '10.77.0.x'}
                       </td>
 
@@ -260,21 +261,21 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                         {services.length > 0 ? (
                           <div className="flex items-center gap-1 flex-wrap">
                             {services.map((s: any, idx: number) => (
-                              <span key={idx} className="bg-slate-100 text-slate-700 font-mono text-[10px] px-2 py-0.5 rounded border border-slate-200">
+                              <span key={idx} className="bg-[#0B0F14] text-slate-300 text-[10px] px-2 py-0.5 rounded border border-[#1F2A37]">
                                 :{s.port || 80} ({s.product || 'tcp'})
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-slate-400 text-[11px] italic">No active ports</span>
+                          <span className="text-slate-600 text-[11px] italic">No open ports</span>
                         )}
                       </td>
 
-                      <td className="py-3.5 px-3 font-mono text-[11px] text-slate-600">
+                      <td className="py-3.5 px-3 text-[11px] text-slate-400">
                         {asset.props?.datastores && asset.props.datastores.length > 0 ? (
-                          <span className="text-purple-700 font-semibold">{asset.props.datastores.join(', ')}</span>
+                          <span className="text-purple-300 font-semibold">{asset.props.datastores.join(', ')}</span>
                         ) : (
-                          <span className="text-slate-400">—</span>
+                          <span className="text-slate-600">—</span>
                         )}
                       </td>
 
@@ -284,7 +285,7 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                             <button
                               onClick={() => onSelectFindingQuery(asset.id)}
                               title="View Findings for Asset"
-                              className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                              className="p-1.5 text-indigo-400 hover:text-white hover:bg-white/5 rounded-lg transition cursor-pointer"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
                             </button>
@@ -292,7 +293,7 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                           <button
                             onClick={() => handleDeleteAsset(asset.id, asset.name)}
                             title="Remove Asset"
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                            className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -309,23 +310,23 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
 
       {/* Add Perimeter Asset Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                <Plus className="w-4 h-4 text-indigo-600" />
-                <span>Register New Perimeter Asset</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#121821] border border-[#1F2A37] rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-white font-mono">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1F2A37]">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase">
+                <Plus className="w-4 h-4 text-indigo-400" />
+                <span>Register Perimeter Asset</span>
               </h3>
               <button
                 onClick={() => { setShowAddModal(false); resetForm(); }}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-white cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl">
+              <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-xl">
                 {error}
               </div>
             )}
@@ -333,23 +334,23 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
             <form onSubmit={handleCreateAsset} className="space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Asset Name / Hostname *</label>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Asset Hostname *</label>
                   <input
                     type="text"
                     required
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="e.g. auth-db.internal"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Asset Type</label>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Asset Type</label>
                   <select
                     value={newType}
                     onChange={(e) => setNewType(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
                   >
                     <option value="Host">Host / Virtual Machine</option>
                     <option value="Container">Docker Container</option>
@@ -362,11 +363,11 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Network Zone</label>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Network Zone</label>
                   <select
                     value={newZone}
                     onChange={(e) => setNewZone(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
                   >
                     <option value="dmz">DMZ (Public-Facing)</option>
                     <option value="internal">Internal Core (Isolated)</option>
@@ -376,66 +377,66 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">IP Address</label>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">IP Address</label>
                   <input
                     type="text"
                     value={newIp}
                     onChange={(e) => setNewIp(e.target.value)}
                     placeholder="10.77.0.x"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Exposed Port</label>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Exposed Port</label>
                   <input
                     type="number"
                     value={newPort}
                     onChange={(e) => setNewPort(e.target.value)}
-                    placeholder="e.g. 5432, 6379, 80"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none focus:border-indigo-500"
+                    placeholder="5432, 6379, 80"
+                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Technology / Banner</label>
+                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Technology / Banner</label>
                   <input
                     type="text"
                     value={newTech}
                     onChange={(e) => setNewTech(e.target.value)}
-                    placeholder="e.g. PostgreSQL 15, Redis 7"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+                    placeholder="PostgreSQL 15, Redis 7"
+                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
                   />
                 </div>
               </div>
 
-              <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-xl flex items-center gap-2.5">
+              <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl flex items-center gap-2.5">
                 <input
                   type="checkbox"
                   id="crownJewelCheck"
                   checked={isCrownJewel}
                   onChange={(e) => setIsCrownJewel(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  className="w-4 h-4 rounded text-purple-600 border-slate-700 bg-slate-900 cursor-pointer"
                 />
-                <label htmlFor="crownJewelCheck" className="text-purple-900 font-semibold cursor-pointer">
-                  Tag as Crown Jewel (Breach target requiring HITL blast radius containment)
+                <label htmlFor="crownJewelCheck" className="text-purple-300 font-semibold cursor-pointer text-xs">
+                  Tag as Crown Jewel (Target requiring HITL blast radius containment)
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1F2A37]">
                 <button
                   type="button"
                   onClick={() => { setShowAddModal(false); resetForm(); }}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold cursor-pointer"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold rounded-xl shadow-glow-indigo cursor-pointer disabled:opacity-50"
                 >
                   {saving ? 'Registering...' : 'Add to Perimeter'}
                 </button>
