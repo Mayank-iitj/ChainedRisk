@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Check, Shield, AlertCircle, ArrowRight, Server, RefreshCw } from 'lucide-react';
+import { X, Check, Shield, AlertCircle, Server, RefreshCw, Lock, Zap, ShieldCheck } from 'lucide-react';
 import {
   authenticateWithGoogle,
   fetchPublicConfig,
-  loginUser,
-  registerUser,
   getApiOrigin,
   setApiOrigin,
   testBackendConnection
@@ -30,12 +28,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   onLoginSuccess,
-  initialMode = 'signin'
 }) => {
-  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
-  const [email, setEmail] = useState('aimerpaix@gmail.com');
-  const [password, setPassword] = useState('••••••••');
-  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientId, setClientId] = useState<string>(
@@ -46,10 +39,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [apiTesting, setApiTesting] = useState<boolean>(false);
   const [apiSuccessMsg, setApiSuccessMsg] = useState<string | null>(null);
   const googleBtnRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setMode(initialMode);
-  }, [initialMode]);
 
   useEffect(() => {
     fetchPublicConfig()
@@ -90,46 +79,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) {
-      setError('Please provide your email.');
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    setApiSuccessMsg(null);
-    try {
-      if (mode === 'signin') {
-        const authRes = await loginUser(email, password || 'password123');
-        onLoginSuccess(authRes.user);
-        onClose();
-      } else {
-        const username = email.split('@')[0] || `user_${Date.now()}`;
-        const authRes = await registerUser({
-          username,
-          email,
-          password: password || 'password123',
-          full_name: email.split('@')[0],
-          org_name: 'Apex SecCorp'
-        });
-        onLoginSuccess(authRes.user);
-        onClose();
-      }
-    } catch (err: any) {
-      console.error('Authentication failed:', err);
-      const is502 = String(err).includes('502');
-      if (is502) {
-        setError('Backend API unreachable (502 Bad Gateway). Please verify your Backend URL below.');
-        setShowApiConfig(true);
-      } else {
-        setError(err.message || 'Authentication failed. Please verify credentials.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoogleCredentialResponse = async (response: any) => {
     if (!response || !response.credential) {
       setError('Google Sign-In was cancelled or failed.');
@@ -146,7 +95,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       console.error('Google auth failed:', err);
       const is502 = String(err).includes('502');
       if (is502) {
-        setError('Backend API unreachable (502 Bad Gateway). Please verify your Backend URL below.');
+        setError('Backend API unreachable (502 Bad Gateway). Please check the backend connection.');
         setShowApiConfig(true);
       } else {
         setError(err.message || 'Google authentication failed.');
@@ -156,22 +105,74 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen || !clientId) return;
+
+    const init = () => {
+      if (window.google?.accounts?.id && clientId) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+
+          if (googleBtnRef.current) {
+            googleBtnRef.current.innerHTML = '';
+            window.google.accounts.id.renderButton(googleBtnRef.current, {
+              theme: 'outline',
+              size: 'large',
+              text: 'continue_with',
+              shape: 'rectangular',
+              width: 300,
+            });
+          }
+        } catch (err) {
+          console.error('Error initializing Google Identity:', err);
+        }
+      }
+    };
+
+    if (window.google?.accounts?.id) {
+      init();
+    } else {
+      const existingScript = document.getElementById('google-gsi-script');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.id = 'google-gsi-script';
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => init();
+        document.body.appendChild(script);
+      } else {
+        const poll = setInterval(() => {
+          if (window.google?.accounts?.id) {
+            clearInterval(poll);
+            init();
+          }
+        }, 100);
+        return () => clearInterval(poll);
+      }
+    }
+  }, [isOpen, clientId]);
+
   const handleTriggerGooglePrompt = () => {
     setError(null);
     if (window.google?.accounts?.id) {
       window.google.accounts.id.prompt((notification: any) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // If prompt notification is not displayed automatically, trigger the rendered GSI button
           const btn = googleBtnRef.current?.querySelector('div[role="button"]') as HTMLElement;
           if (btn) {
             btn.click();
           } else {
-            setError('Please click the Google Sign-In button below.');
+            setError('Please click the Google button below.');
           }
         }
       });
     } else {
-      setError('Google Sign-In is initializing. Please click the Google button below.');
+      setError('Google Sign-In is initializing. Please click below.');
     }
   };
 
@@ -186,7 +187,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     >
       {/* Outer Card with subtle depth & textured border */}
       <div className="relative w-full max-w-[880px] bg-[#0C0D0E] border border-[#22242A] rounded-[32px] shadow-[0_25px_70px_rgba(0,0,0,0.85)] p-3 sm:p-4 overflow-hidden animate-scaleUp">
-        {/* Subtle Close Button Top Right */}
+        {/* Close Button Top Right */}
         <button
           onClick={onClose}
           className="absolute top-5 right-5 z-30 w-8 h-8 rounded-full bg-black/60 hover:bg-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center transition cursor-pointer border border-neutral-800"
@@ -196,11 +197,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </button>
 
         {/* 2-Column Split Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 items-stretch min-h-[520px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 items-stretch min-h-[500px]">
           {/* ========================================================= */}
           {/* LEFT PANEL: Iridescent Aurora Silk Wave Art & Typography */}
           {/* ========================================================= */}
-          <div className="relative rounded-[24px] overflow-hidden bg-[#07070A] flex flex-col justify-between p-7 sm:p-8 min-h-[300px] md:min-h-[520px] shadow-inner border border-white/5">
+          <div className="relative rounded-[24px] overflow-hidden bg-[#07070A] flex flex-col justify-between p-7 sm:p-8 min-h-[300px] md:min-h-[500px] shadow-inner border border-white/5">
             {/* Background Multi-Layer Iridescent Ribbon Wave SVG */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <svg
@@ -266,7 +267,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   filter="url(#softGlow)"
                 />
 
-                {/* Deep Silk Wave Folds (Shadows) */}
+                {/* Deep Silk Wave Folds */}
                 <path
                   d="M0,280 C120,290 280,240 380,140 C440,80 490,10 520,-50 L520,650 L0,650 Z"
                   fill="#06070A"
@@ -287,53 +288,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   opacity="0.75"
                 />
 
-                {/* Brilliant Golden Edge Rim Lighting */}
+                {/* Highlight Filament with Amber Edge */}
                 <path
-                  d="M160,-40 Q310,140 410,230 Q460,280 475,340 Q490,410 440,510"
+                  d="M100,-40 C200,95 305,195 400,265 C445,300 475,335 485,385"
                   stroke="url(#goldenCrest)"
-                  strokeWidth="3.5"
+                  strokeWidth="3.2"
                   strokeLinecap="round"
                   filter="url(#crispGlow)"
                 />
-
-                {/* Ultra-Fine Ethereal Accent Streak */}
-                <path
-                  d="M200,-40 C320,120 420,210 460,270 C485,310 492,360 470,430"
-                  stroke="#FFFFFF"
-                  strokeWidth="1.2"
-                  opacity="0.85"
-                  strokeLinecap="round"
-                />
-
-                {/* Subtle Amber Horizon Particle Shimmer */}
-                <circle cx="430" cy="245" r="1.5" fill="#FDE68A" opacity="0.9" />
-                <circle cx="450" cy="275" r="1" fill="#FDE68A" opacity="0.7" />
-                <circle cx="380" cy="210" r="1.5" fill="#FFFFFF" opacity="0.8" />
               </svg>
-
-              {/* Gentle Vignette Overlays for Maximum Contrast */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/30 pointer-events-none" />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-black/20 pointer-events-none" />
             </div>
 
-            {/* Top-Left Circular Brand Badge (matches 'a.' in the reference image) */}
-            <div className="relative z-20 flex items-center justify-between">
-              <div className="w-9 h-9 rounded-full bg-black/90 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg group">
-                <span className="text-[#FBBF24] font-black text-sm tracking-tighter lowercase select-none">
-                  c.
-                </span>
+            {/* Top Left Brand Dot Badge */}
+            <div className="relative z-10">
+              <div className="w-9 h-9 rounded-full bg-black/70 border border-neutral-800 flex items-center justify-center backdrop-blur-md shadow-lg">
+                <span className="text-[#FBBF24] font-bold text-sm tracking-tighter">cr.</span>
               </div>
-              <span className="text-[10px] font-mono tracking-widest uppercase text-white/50 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/5">
-                ChainedRisk
-              </span>
             </div>
 
-            {/* Bottom-Left Typography (matches "Be a Part of Something Beautiful") */}
-            <div className="relative z-20 space-y-1 mt-auto pt-24">
-              <h2 className="text-[32px] sm:text-[36px] leading-[1.12] font-light text-white tracking-tight">
-                Be a Part of<br />
-                <span className="font-light text-white/95">Something </span>
-                <span className="font-extrabold text-white">Beautiful</span>
+            {/* Bottom Left Hero Caption */}
+            <div className="relative z-10 space-y-1.5 select-none">
+              <h2 className="text-2xl sm:text-3xl font-light text-white tracking-tight leading-snug">
+                Be a Part of <br />
+                <span className="font-extrabold text-white">Something Beautiful</span>
               </h2>
               <p className="text-[11px] text-neutral-400 font-sans pt-1">
                 Zero-Trust Deterministic Attack Path Correlation.
@@ -342,17 +319,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
 
           {/* ========================================================= */}
-          {/* RIGHT PANEL: Clean Dark Obsidian Login Form              */}
+          {/* RIGHT PANEL: Pure Google OAuth Authentication Panel      */}
           {/* ========================================================= */}
-          <div className="flex flex-col justify-center px-6 sm:px-10 py-6 sm:py-8 bg-[#0C0D0E] relative">
-            <div className="max-w-[340px] w-full mx-auto space-y-6">
+          <div className="flex flex-col justify-between px-6 sm:px-10 py-6 sm:py-8 bg-[#0C0D0E] relative">
+            <div className="max-w-[340px] w-full mx-auto space-y-6 my-auto">
               {/* Header Titles */}
-              <div className="text-center space-y-1.5">
+              <div className="text-center space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#17181C] border border-[#272930] text-[11px] font-medium text-neutral-300">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#FBBF24]" />
+                  <span>Enterprise Single Sign-On</span>
+                </div>
                 <h3 className="text-[26px] font-bold text-white tracking-tight">
-                  {mode === 'signin' ? 'Login' : 'Create an account'}
+                  Continue with Google
                 </h3>
-                <p className="text-xs text-neutral-400 font-normal">
-                  Enter your credentials to access your account
+                <p className="text-xs text-neutral-400 font-normal leading-relaxed">
+                  Sign in with your Google Workspace or personal account to access ChainedRisk.
                 </p>
               </div>
 
@@ -388,7 +369,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     </button>
                   </div>
                   <p className="text-[11px] text-neutral-400 leading-tight">
-                    Specify the direct backend API origin (e.g. your Render backend service URL) if reverse-proxying is unreachable:
+                    Specify your Render backend URL if reverse-proxying is unreachable:
                   </p>
                   <div className="flex gap-2">
                     <input
@@ -410,116 +391,68 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               )}
 
-              {/* Form Inputs */}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Email Input */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-neutral-300">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="aimerpaix@gmail.com"
-                    required
-                    className="w-full bg-[#17181C] border border-[#272930] hover:border-[#3A3C44] focus:border-[#FBBF24] focus:ring-1 focus:ring-[#FBBF24] rounded-xl px-4 py-3 text-xs text-white placeholder-neutral-500 outline-none transition duration-150 font-sans"
-                  />
-                </div>
-
-                {/* Password Input */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-neutral-300">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    className="w-full bg-[#17181C] border border-[#272930] hover:border-[#3A3C44] focus:border-[#FBBF24] focus:ring-1 focus:ring-[#FBBF24] rounded-xl px-4 py-3 text-xs text-white placeholder-neutral-500 outline-none transition duration-150 font-sans tracking-widest"
-                  />
-                </div>
-
-                {/* Remember Me Checkbox & API settings link */}
-                <div className="flex items-center justify-between pt-0.5">
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      onClick={() => setRememberMe(!rememberMe)}
-                      className={`w-4 h-4 rounded border transition flex items-center justify-center cursor-pointer ${
-                        rememberMe
-                          ? 'bg-[#FBBF24] border-[#FBBF24] text-black'
-                          : 'bg-[#17181C] border-[#363842]'
-                      }`}
-                    >
-                      {rememberMe && <Check className="w-3 h-3 stroke-[3]" />}
-                    </div>
-                    <label
-                      onClick={() => setRememberMe(!rememberMe)}
-                      className="text-xs text-neutral-400 cursor-pointer select-none font-normal"
-                    >
-                      Remember me
-                    </label>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowApiConfig(!showApiConfig)}
-                    className="text-[11px] text-neutral-500 hover:text-neutral-300 flex items-center gap-1 cursor-pointer transition"
-                  >
-                    <Server className="w-3 h-3" />
-                    <span>API Endpoint</span>
-                  </button>
-                </div>
-
-                {/* Primary Amber Login Button (identical to reference photo) */}
+              {/* Primary Amber Google OAuth Action Button */}
+              <div className="space-y-3 pt-1">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleTriggerGooglePrompt}
                   disabled={loading}
-                  className="w-full py-3 px-4 bg-[#FBBF24] hover:bg-[#F59E0B] active:bg-[#D97706] text-black font-bold text-xs uppercase tracking-wider rounded-xl shadow-[0_4px_24px_rgba(251,191,36,0.28)] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+                  className="w-full py-3.5 px-4 bg-[#FBBF24] hover:bg-[#F59E0B] active:bg-[#D97706] text-black font-bold text-xs uppercase tracking-wider rounded-xl shadow-[0_4px_24px_rgba(251,191,36,0.28)] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50"
                 >
-                  <span>{loading ? 'Authenticating...' : mode === 'signin' ? 'Login' : 'Create Account'}</span>
+                  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#1A1A1A"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#1A1A1A"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#1A1A1A"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#1A1A1A"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                  <span>{loading ? 'Authenticating with Google...' : 'Sign in with Google'}</span>
                 </button>
-              </form>
 
-              {/* Rendered Google Identity Services Button */}
-              <div className="pt-1 flex flex-col items-center">
-                <div ref={googleBtnRef} className="min-h-[44px] flex justify-center w-full" />
+                {/* Rendered Google Identity Services Official Button */}
+                <div className="flex justify-center w-full min-h-[44px]">
+                  <div ref={googleBtnRef} className="w-full flex justify-center" />
+                </div>
               </div>
 
-              {/* Footer Switcher */}
-              <div className="text-center text-xs text-neutral-400 pt-1">
-                {mode === 'signin' ? (
-                  <>
-                    Not a member?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode('signup');
-                        setError(null);
-                      }}
-                      className="text-[#FBBF24] hover:underline font-semibold cursor-pointer ml-0.5"
-                    >
-                      Create an account
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode('signin');
-                        setError(null);
-                      }}
-                      className="text-[#FBBF24] hover:underline font-semibold cursor-pointer ml-0.5"
-                    >
-                      Login
-                    </button>
-                  </>
-                )}
+              {/* Zero-Trust Security Micro-Bullets */}
+              <div className="pt-2 border-t border-[#1C1E24] space-y-2 text-[11px] text-neutral-400">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0" />
+                  <span>Zero manual passwords to manage or leak</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Shield className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0" />
+                  <span>Google OAuth 2.0 & OIDC cryptographic verification</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0" />
+                  <span>Instant personalized workspace & RBAC provisioning</span>
+                </div>
               </div>
+            </div>
+
+            {/* Bottom Footer API Endpoint Toggle */}
+            <div className="text-center pt-4">
+              <button
+                type="button"
+                onClick={() => setShowApiConfig(!showApiConfig)}
+                className="text-[11px] text-neutral-600 hover:text-neutral-400 inline-flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <Server className="w-3 h-3" />
+                <span>API Connection Endpoint</span>
+              </button>
             </div>
           </div>
         </div>
