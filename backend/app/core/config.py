@@ -29,6 +29,16 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
 
+    # Port for cloud deployment (e.g. Render)
+    PORT: int = 8000
+
+    @property
+    def db_url(self) -> str:
+        url = os.environ.get("DATABASE_URL") or os.environ.get("CR_DB_URL") or self.CR_DB_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
+
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
 
 settings = Settings()

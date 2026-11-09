@@ -26,6 +26,8 @@ class OnboardingAssetInput(BaseModel):
 
 class OnboardingRequest(BaseModel):
     org_name: str
+    operator_name: Optional[str] = None
+    operator_title: Optional[str] = None
     industry: str
     environment: str
     risk_tolerance: str = "standard" # zero_tolerance, standard, high_gain_only
@@ -35,6 +37,8 @@ class OnboardingRequest(BaseModel):
     ingress_assets: List[OnboardingAssetInput] = Field(default_factory=list)
     crown_jewels: List[OnboardingAssetInput] = Field(default_factory=list)
     active_scanners: List[str] = Field(default_factory=lambda: ["nmap", "gitleaks", "nuclei", "httpx"])
+    attack_vectors_in_scope: List[str] = Field(default_factory=lambda: ["git", "ssrf", "creds", "cors", "env"])
+    hitl_gate_policy: Optional[str] = "strict_l1_l2"
     notification_channel: Optional[str] = "discord"
     notification_webhook: Optional[str] = ""
     seed_baseline_scenario: bool = True

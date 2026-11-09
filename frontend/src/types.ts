@@ -203,6 +203,8 @@ export interface OnboardingAssetInput {
 
 export interface OnboardingProfileData {
   org_name: string;
+  operator_name?: string;
+  operator_title?: string;
   industry: string;
   environment: string;
   risk_tolerance: string;
@@ -212,6 +214,8 @@ export interface OnboardingProfileData {
   ingress_assets: OnboardingAssetInput[];
   crown_jewels: OnboardingAssetInput[];
   active_scanners: string[];
+  attack_vectors_in_scope?: string[];
+  hitl_gate_policy?: string;
   notification_channel?: string;
   notification_webhook?: string;
   seed_baseline_scenario?: boolean;

@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: chainedrisk
+    runtime: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /
+    autoDeploy: true
+    disk:
+      name: chainedrisk-storage
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: CR_ENV
+        value: production
+      - key: CR_SECRET_KEY
+        generateValue: true
+      - key: CR_APPROVAL_HMAC_KEY
+        generateValue: true
+      - key: CR_DB_URL
+        value: sqlite:////app/data/chainedrisk.db
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

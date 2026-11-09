@@ -61,28 +61,39 @@ def create_verification_plan(chain_id: str, db: Session) -> Dict[str, Any]:
         fid_first = fids[0] if fids else ""
         target_asset = findings[0].asset_id if findings else "ast_app"
 
+        # Resolve asset properties dynamically
+        target_asset_obj = db.query(Asset).filter(Asset.id == target_asset).first()
+        t_name = target_asset_obj.name if target_asset_obj else "target.internal"
+        t_props = json.loads(target_asset_obj.props_json or "{}") if target_asset_obj else {}
+        t_ip = t_props.get("ip", "10.77.0.12")
+
+        ing_asset = db.query(Asset).filter(Asset.project_id == chain.project_id, Asset.zone == "dmz").first()
+        ing_props = json.loads(ing_asset.props_json or "{}") if ing_asset else {}
+        ing_ip = ing_props.get("ip", "10.77.0.10")
+        ing_name = ing_asset.name if ing_asset else "gateway.dmz"
+
         action = "http_get_probe"
-        params = {"url": "http://10.77.0.10:8080/"}
-        cmd_preview = "http_get_probe --url http://10.77.0.10:8080/"
+        params = {"url": f"http://{ing_ip}:8080/"}
+        cmd_preview = f"http_get_probe --url http://{ing_ip}:8080/"
 
         if "git" in fid_first.lower() or any("git" in f.rule_id.lower() for f in findings):
             action = "git_exposure_check"
-            params = {"url": "http://10.77.0.10:8080/.git/config"}
-            cmd_preview = "git_exposure_check --url http://10.77.0.10:8080/.git/config"
-            target_asset = "ast_app"
+            params = {"url": f"http://{ing_ip}:8080/.git/config"}
+            cmd_preview = f"git_exposure_check --url http://{ing_ip}:8080/.git/config"
+            target_asset = ing_asset.id if ing_asset else target_asset
         elif "ssrf" in fid_first.lower() or any("ssrf" in f.rule_id.lower() for f in findings):
             action = "ssrf_canary_probe"
             params = {
-                "url": "http://10.77.0.10:8080/fetch",
-                "target_url": "http://10.77.0.12:6379/"
+                "url": f"http://{ing_ip}:8080/fetch",
+                "target_url": f"http://{t_ip}:6379/"
             }
-            cmd_preview = "ssrf_canary_probe --url http://10.77.0.10:8080/fetch?u=http://10.77.0.12:6379/ --expect reachable"
-            target_asset = "ast_redis"
+            cmd_preview = f"ssrf_canary_probe --url http://{ing_ip}:8080/fetch?u=http://{t_ip}:6379/ --expect reachable"
+            target_asset = target_asset_obj.id if target_asset_obj else target_asset
         elif "redis" in fid_first.lower() or any("redis" in f.rule_id.lower() for f in findings):
             action = "redis_unauth_ping"
-            params = {"host": "10.77.0.12", "port": 6379}
-            cmd_preview = "redis_unauth_ping --host 10.77.0.12 --port 6379 --expect PONG"
-            target_asset = "ast_redis"
+            params = {"host": t_ip, "port": 6379}
+            cmd_preview = f"redis_unauth_ping --host {t_ip} --port 6379 --expect PONG"
+            target_asset = target_asset_obj.id if target_asset_obj else target_asset
 
         action_def = ACTION_CATALOG.get(action, ACTION_CATALOG["http_get_probe"])
         risk_level = action_def["risk_level"]

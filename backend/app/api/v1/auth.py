@@ -357,6 +357,10 @@ def complete_onboarding(
             primary_jwl = created_jwl_assets[0] if created_jwl_assets else primary_ing
             second_jwl = created_jwl_assets[1] if len(created_jwl_assets) > 1 else primary_jwl
 
+            ing_ip = json.loads(primary_ing.props_json or "{}").get("ip", "10.77.0.10")
+            jwl_ip = json.loads(primary_jwl.props_json or "{}").get("ip", "10.77.0.12")
+            jwl2_ip = json.loads(second_jwl.props_json or "{}").get("ip", "10.77.0.11")
+
             for f_spec in raw_findings:
                 fid = f"fnd_{uuid.uuid4().hex[:8]}"
                 # Map asset ID
@@ -371,11 +375,23 @@ def complete_onboarding(
                     target_asset_id = primary_jwl.id
                     target_host = primary_jwl.name
 
-                # Tailor evidence strings with user's hostnames
+                # Tailor evidence strings with user's hostnames and IPs
                 ev_str = json.dumps(f_spec.get("evidence", {}))
                 ev_str = ev_str.replace("app.lab", primary_ing.name)
                 ev_str = ev_str.replace("git.lab", second_jwl.name)
                 ev_str = ev_str.replace("redis.lab", primary_jwl.name)
+                ev_str = ev_str.replace("10.77.0.10", ing_ip)
+                ev_str = ev_str.replace("10.77.0.11", jwl2_ip)
+                ev_str = ev_str.replace("10.77.0.12", jwl_ip)
+
+                # Tailor cloud environment specifics if applicable
+                if "Google" in req.environment or "GCP" in req.environment:
+                    ev_str = ev_str.replace("AWS_ACCESS_KEY_ID", "GCP_SERVICE_ACCOUNT_KEY")
+                    ev_str = ev_str.replace("AWS_SECRET_ACCESS_KEY", "GCP_SA_PRIVATE_KEY")
+                elif "Azure" in req.environment:
+                    ev_str = ev_str.replace("AWS_ACCESS_KEY_ID", "AZURE_CLIENT_ID")
+                    ev_str = ev_str.replace("AWS_SECRET_ACCESS_KEY", "AZURE_CLIENT_SECRET")
+
                 tailored_ev = json.loads(ev_str)
 
                 # Generate clean dedup key
@@ -427,6 +443,10 @@ def complete_onboarding(
 
     # Save user onboarding status and active project
     user.org_name = req.org_name
+    if req.operator_name:
+        user.full_name = req.operator_name
+    if req.operator_title:
+        user.title = req.operator_title
     user.active_project_id = project_id
     user.onboarding_completed = True
     user.onboarding_profile_json = json.dumps(req.model_dump())

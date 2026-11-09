@@ -22,6 +22,9 @@ from sqlalchemy import text
 
 def migrate_sqlite_columns():
     """Safely add new columns to SQLite tables if they exist from older schema versions."""
+    from backend.app.core.config import settings
+    if "sqlite" not in settings.db_url:
+        return
     try:
         with engine.connect() as conn:
             existing_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(users)"))]
