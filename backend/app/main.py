@@ -120,16 +120,26 @@ app.include_router(ws.router)
 frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 assets_dist = frontend_dist / "assets"
 if frontend_dist.exists():
-    from fastapi.responses import FileResponse
+    from fastapi.responses import FileResponse, JSONResponse
     from fastapi import HTTPException
 
     assets_dist.mkdir(parents=True, exist_ok=True)
+
+    # Generate runtime-config.js for client-side service discovery
+    runtime_config_path = frontend_dist / "runtime-config.js"
+    google_cid = os.environ.get("GOOGLE_CLIENT_ID", "506395453665-diof91lvuhuhp4kgji3umibrjunuthq8.apps.googleusercontent.com")
+    runtime_config_path.write_text(
+        f'window.__RUNTIME_CONFIG__ = {{\n'
+        f'  BACKEND_URL: "",\n'
+        f'  GOOGLE_CLIENT_ID: "{google_cid}"\n'
+        f'}};\n'
+    )
 
     @app.get("/")
     def serve_frontend_root():
         index_file = frontend_dist / "index.html"
         if index_file.exists():
-            return FileResponse(index_file)
+            return FileResponse(index_file, headers={"Cross-Origin-Opener-Policy": "same-origin-allow-popups"})
         return {"service": "ChainedRisk API", "status": "operational"}
 
     app.mount("/assets", StaticFiles(directory=str(assets_dist)), name="assets")
@@ -141,10 +151,13 @@ if frontend_dist.exists():
             raise HTTPException(status_code=404, detail="Not Found")
         file_path = frontend_dist / full_path
         if file_path.exists() and file_path.is_file():
-            return FileResponse(file_path)
+            headers = {"Cross-Origin-Opener-Policy": "same-origin-allow-popups"}
+            if full_path == "runtime-config.js":
+                headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+            return FileResponse(file_path, headers=headers)
         index_file = frontend_dist / "index.html"
         if index_file.exists():
-            return FileResponse(index_file)
+            return FileResponse(index_file, headers={"Cross-Origin-Opener-Policy": "same-origin-allow-popups"})
         return {"service": "ChainedRisk API", "status": "operational"}
 else:
     @app.get("/")
