@@ -46,34 +46,34 @@ export const FindingsList: React.FC<FindingsListProps> = ({ projectId, initialQu
 
   return (
     <div className="space-y-6 pb-8 select-none">
-      <div className="reveal-block flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-mono tracking-wider text-[#64748B] uppercase">
-            <span className="text-[#6366F1] font-semibold">SECURITY TELEMETRY</span> // FINDINGS POOL
+          <div className="text-[11px] font-mono tracking-wider text-neutral-400 uppercase">
+            <span className="text-white font-semibold">SECURITY TELEMETRY</span> // FINDINGS POOL
           </div>
           <h2 className="text-xl font-bold text-white tracking-tight mt-0.5 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
+            <AlertTriangle className="w-5 h-5 text-white" />
             <span>Raw Ingested Findings</span>
-            <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded-full ml-1">
+            <span className="text-xs font-mono font-bold text-black bg-white px-2.5 py-0.5 rounded-full ml-1">
               {findings.length} Records
             </span>
           </h2>
-          <p className="text-xs text-[#64748B] mt-0.5 font-mono">
+          <p className="text-xs text-neutral-400 mt-0.5 font-mono">
             Normalized across recon, config-analysis, and vulnerability stages for graph correlation.
           </p>
         </div>
       </div>
 
       {/* Filters Bar */}
-      <div className="reveal-block bg-[#121821] border border-[#1F2A37] rounded-xl p-4 flex flex-wrap items-center gap-3 text-xs font-mono shadow-card">
+      <div className="bg-[#0A0A0A] border border-[#262626] rounded-xl p-4 flex flex-wrap items-center gap-3 text-xs font-mono">
         <div className="flex-1 min-w-[220px] relative">
-          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+          <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5" />
           <input
             type="text"
             placeholder="Search findings, CWEs, rules..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#0B0F14] border border-[#1F2A37] rounded-lg pl-8 pr-3 py-1.5 text-white placeholder:text-[#64748B] focus:outline-none focus:border-[#6366F1]"
+            className="w-full bg-black border border-[#262626] rounded-lg pl-8 pr-3 py-1.5 text-white placeholder:text-neutral-500 focus:outline-none focus:border-white"
           />
         </div>
 
@@ -81,7 +81,7 @@ export const FindingsList: React.FC<FindingsListProps> = ({ projectId, initialQu
         <select
           value={selectedStage}
           onChange={(e) => setSelectedStage(e.target.value)}
-          className="bg-[#0B0F14] border border-[#1F2A37] rounded-lg px-3 py-1.5 text-slate-300 focus:outline-none focus:border-[#6366F1]"
+          className="bg-black border border-[#262626] rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-white"
         >
           <option value="">All Stages</option>
           <option value="recon">Stage: Recon</option>
@@ -93,7 +93,7 @@ export const FindingsList: React.FC<FindingsListProps> = ({ projectId, initialQu
         <select
           value={selectedSeverity}
           onChange={(e) => setSelectedSeverity(e.target.value)}
-          className="bg-[#0B0F14] border border-[#1F2A37] rounded-lg px-3 py-1.5 text-slate-300 focus:outline-none focus:border-[#6366F1]"
+          className="bg-black border border-[#262626] rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-white"
         >
           <option value="">All Severities</option>
           <option value="critical">Critical</option>
@@ -105,8 +105,8 @@ export const FindingsList: React.FC<FindingsListProps> = ({ projectId, initialQu
       </div>
 
       {/* Findings Table */}
-      <div className="reveal-block bg-[#121821] border border-[#1F2A37] rounded-xl overflow-hidden shadow-card text-xs font-mono">
-        <div className="grid grid-cols-12 bg-[#0B0F14] border-b border-[#1F2A37] p-3.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+      <div className="bg-[#0A0A0A] border border-[#262626] rounded-xl overflow-hidden text-xs font-mono">
+        <div className="grid grid-cols-12 bg-black border-b border-[#262626] p-3.5 text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
           <div className="col-span-5">FINDING IDENTITY / TITLE</div>
           <div className="col-span-2">ASSET</div>
           <div className="col-span-2">STAGE</div>
@@ -114,36 +114,36 @@ export const FindingsList: React.FC<FindingsListProps> = ({ projectId, initialQu
           <div className="col-span-1 text-right">EVIDENCE</div>
         </div>
 
-        <div className="divide-y divide-[#1F2A37] max-h-[540px] overflow-y-auto">
+        <div className="divide-y divide-[#262626] max-h-[540px] overflow-y-auto">
           {findings.map((f) => (
             <div
               key={f.id}
               onClick={() => setInspectFinding(f)}
-              className="grid grid-cols-12 p-3.5 hover:bg-white/[0.03] transition cursor-pointer items-center"
+              className="grid grid-cols-12 p-3.5 hover:bg-white/[0.05] transition cursor-pointer items-center"
             >
               <div className="col-span-5 pr-3">
                 <span className="text-white font-semibold block truncate font-sans text-xs">{f.title}</span>
-                <span className="text-[10px] text-slate-500 font-mono">{f.rule_id} • {f.source_tool}</span>
+                <span className="text-[10px] text-neutral-400 font-mono">{f.rule_id} • {f.source_tool}</span>
               </div>
-              <div className="col-span-2 font-mono text-indigo-400 font-medium truncate">{f.asset_id}</div>
-              <div className="col-span-2 font-mono text-slate-400 capitalize">{f.stage}</div>
+              <div className="col-span-2 font-mono text-white font-medium truncate">{f.asset_id}</div>
+              <div className="col-span-2 font-mono text-neutral-400 capitalize">{f.stage}</div>
               <div className="col-span-2">
                 <span
                   className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
                     f.severity === 'critical'
-                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                      ? 'bg-white text-black font-bold border border-white'
                       : f.severity === 'high'
-                      ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30'
+                      ? 'border-2 border-white text-white font-bold bg-black'
                       : f.severity === 'medium'
-                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      ? 'border border-neutral-400 text-neutral-200 bg-black'
+                      : 'border border-neutral-700 text-neutral-400 bg-black'
                   }`}
                 >
                   {f.severity}
                 </span>
               </div>
               <div className="col-span-1 text-right">
-                <button className="text-[#6366F1] hover:text-white font-mono text-[11px] flex items-center gap-1 ml-auto font-medium cursor-pointer">
+                <button className="text-white hover:underline font-mono text-[11px] flex items-center gap-1 ml-auto font-medium cursor-pointer">
                   <Eye className="w-3.5 h-3.5" />
                   <span>Inspect</span>
                 </button>
@@ -161,34 +161,34 @@ export const FindingsList: React.FC<FindingsListProps> = ({ projectId, initialQu
           }}
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn"
         >
-          <div className="bg-[#121821] border border-[#1F2A37] rounded-2xl p-6 max-w-xl w-full shadow-2xl space-y-4 text-xs font-mono text-white">
-            <div className="flex justify-between items-center border-b border-[#1F2A37] pb-3">
+          <div className="bg-[#0A0A0A] border border-[#262626] rounded-2xl p-6 max-w-xl w-full shadow-2xl space-y-4 text-xs font-mono text-white">
+            <div className="flex justify-between items-center border-b border-[#262626] pb-3">
               <h3 className="text-sm font-bold text-white font-sans">{inspectFinding.title}</h3>
               <button
                 onClick={() => setInspectFinding(null)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-neutral-400 hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-2 text-slate-300">
-              <div><span className="text-slate-500">Finding ID:</span> <span className="text-white font-semibold">{inspectFinding.id}</span></div>
-              <div><span className="text-slate-500">Asset:</span> <span className="text-indigo-400 font-semibold">{inspectFinding.asset_id}</span></div>
-              <div><span className="text-slate-500">Tool / Rule:</span> <span className="text-white">{inspectFinding.source_tool} ({inspectFinding.rule_id})</span></div>
-              <div><span className="text-slate-500">Capabilities Granted:</span> <span className="text-emerald-400 font-semibold">{inspectFinding.provides.join(', ') || 'None'}</span></div>
+            <div className="space-y-2 text-neutral-300">
+              <div><span className="text-neutral-500">Finding ID:</span> <span className="text-white font-semibold">{inspectFinding.id}</span></div>
+              <div><span className="text-neutral-500">Asset:</span> <span className="text-white font-semibold">{inspectFinding.asset_id}</span></div>
+              <div><span className="text-neutral-500">Tool / Rule:</span> <span className="text-white">{inspectFinding.source_tool} ({inspectFinding.rule_id})</span></div>
+              <div><span className="text-neutral-500">Capabilities Granted:</span> <span className="text-white font-semibold">{inspectFinding.provides.join(', ') || 'None'}</span></div>
             </div>
 
             <div>
-              <span className="text-slate-400 block mb-1.5 font-bold uppercase text-[10px]">Evidence Payload (Redacted):</span>
-              <pre className="bg-[#0B0F14] text-emerald-400 p-3.5 rounded-xl font-mono text-[11px] overflow-x-auto max-h-48 border border-[#1F2A37] whitespace-pre-wrap">
+              <span className="text-neutral-400 block mb-1.5 font-bold uppercase text-[10px]">Evidence Payload (Redacted):</span>
+              <pre className="bg-black text-neutral-200 p-3.5 rounded-xl font-mono text-[11px] overflow-x-auto max-h-48 border border-[#262626] whitespace-pre-wrap">
                 {JSON.stringify(inspectFinding.evidence, null, 2)}
               </pre>
             </div>
 
             <button
               onClick={() => setInspectFinding(null)}
-              className="w-full py-2 bg-[#161F2C] hover:bg-[#1E293B] text-slate-300 rounded-xl transition cursor-pointer font-sans"
+              className="w-full py-2 bg-white hover:bg-neutral-200 text-black font-bold rounded-xl transition cursor-pointer font-sans"
             >
               Close
             </button>

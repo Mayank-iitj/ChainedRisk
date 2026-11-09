@@ -18,47 +18,42 @@ import {
   Globe,
   AlertTriangle,
   Zap,
-  Shield,
-  Layers,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  RefreshCw
+  Shield
 } from 'lucide-react';
 
-// Custom Asset Host Node
+// Custom Monochrome Host Node
 const HostNode: React.FC<NodeProps> = ({ data, selected }) => {
   const isDmz = (data.zone || '').toLowerCase().includes('dmz');
   const isTarget = (data.zone || '').toLowerCase().includes('datastore') || (data.name || '').includes('redis') || (data.name || '').includes('db');
 
   return (
     <div
-      className={`relative px-4 py-3 rounded-xl border font-mono transition-all duration-200 min-w-[210px] ${
+      className={`relative px-4 py-3 rounded-lg border font-mono transition-all duration-200 min-w-[210px] ${
         selected
-          ? 'bg-[#182335] border-indigo-400 ring-2 ring-indigo-500/40 shadow-glow-indigo'
+          ? 'bg-black border-2 border-white ring-2 ring-white/30 shadow-lg'
           : isTarget
-          ? 'bg-[#1A1318] border-red-500/60 shadow-lg'
+          ? 'bg-[#0A0A0A] border-2 border-white shadow-md'
           : isDmz
-          ? 'bg-[#1D1914] border-amber-500/60 shadow-lg'
-          : 'bg-[#121821] border-[#1F2A37] hover:border-slate-500 shadow-md'
+          ? 'bg-[#0A0A0A] border border-neutral-300 shadow-sm'
+          : 'bg-[#0A0A0A] border border-[#333333] hover:border-neutral-400 shadow-sm'
       }`}
     >
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-2.5 !h-2.5 !bg-indigo-400 !border-2 !border-[#0B0F14]"
+        className="!w-2 !h-2 !bg-white !border !border-black"
       />
 
-      <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-white/10">
+      <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-[#262626]">
         <div className="flex items-center gap-1.5">
           {isTarget ? (
-            <Database className="w-3.5 h-3.5 text-red-400" />
+            <Database className="w-3.5 h-3.5 text-white" />
           ) : isDmz ? (
-            <Globe className="w-3.5 h-3.5 text-amber-400" />
+            <Globe className="w-3.5 h-3.5 text-white" />
           ) : (
-            <Server className="w-3.5 h-3.5 text-indigo-400" />
+            <Server className="w-3.5 h-3.5 text-white" />
           )}
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white">
             {data.type || 'Host'}
           </span>
         </div>
@@ -66,10 +61,10 @@ const HostNode: React.FC<NodeProps> = ({ data, selected }) => {
         <span
           className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
             isTarget
-              ? 'bg-red-950/70 text-red-300 border border-red-800/80'
+              ? 'bg-white text-black font-bold'
               : isDmz
-              ? 'bg-amber-950/70 text-amber-300 border border-amber-800/80'
-              : 'bg-indigo-950/70 text-indigo-300 border border-indigo-800/80'
+              ? 'border border-white text-white'
+              : 'border border-neutral-600 text-neutral-300'
           }`}
         >
           {data.zone || 'Internal'}
@@ -77,116 +72,96 @@ const HostNode: React.FC<NodeProps> = ({ data, selected }) => {
       </div>
 
       <div className="pt-1.5">
-        <div className="text-xs font-bold text-slate-100 truncate">{data.label}</div>
-        <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">{data.id}</div>
+        <div className="text-xs font-bold text-white truncate">{data.label}</div>
+        <div className="text-[10px] text-neutral-400 font-mono mt-0.5 truncate">{data.id}</div>
       </div>
 
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-2.5 !h-2.5 !bg-indigo-400 !border-2 !border-[#0B0F14]"
+        className="!w-2 !h-2 !bg-white !border !border-black"
       />
     </div>
   );
 };
 
-// Custom Finding / Vulnerability Node
+// Custom Monochrome Finding Node
 const FindingNode: React.FC<NodeProps> = ({ data, selected }) => {
   const sev = (data.severity || 'medium').toLowerCase();
 
-  const sevColors = {
-    critical: {
-      bg: 'bg-[#221215]',
-      border: 'border-red-500/80',
-      badge: 'bg-red-950/80 text-red-300 border-red-800/80',
-      glow: 'shadow-red-950/40'
-    },
-    high: {
-      bg: 'bg-[#221812]',
-      border: 'border-orange-500/80',
-      badge: 'bg-orange-950/80 text-orange-300 border-orange-800/80',
-      glow: 'shadow-orange-950/40'
-    },
-    medium: {
-      bg: 'bg-[#221F12]',
-      border: 'border-amber-500/80',
-      badge: 'bg-amber-950/80 text-amber-300 border-amber-800/80',
-      glow: 'shadow-amber-950/40'
-    },
-    low: {
-      bg: 'bg-[#0E1F28]',
-      border: 'border-cyan-500/80',
-      badge: 'bg-cyan-950/80 text-cyan-300 border-cyan-800/80',
-      glow: 'shadow-cyan-950/40'
-    }
-  }[sev] || {
-    bg: 'bg-[#121821]',
-    border: 'border-slate-700',
-    badge: 'bg-slate-800 text-slate-300 border-slate-700',
-    glow: ''
-  };
-
   return (
     <div
-      className={`relative px-3.5 py-2.5 rounded-xl border font-mono transition-all duration-200 min-w-[200px] ${sevColors.bg} ${
-        selected ? 'ring-2 ring-indigo-400 border-indigo-400 shadow-glow-indigo' : sevColors.border
-      } ${sevColors.glow} shadow-md`}
-    >
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!w-2.5 !h-2.5 !bg-amber-400 !border-2 !border-[#0B0F14]"
-      />
-
-      <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-white/10">
-        <div className="flex items-center gap-1.5">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-          <span className="text-[10px] font-bold text-slate-300">Finding</span>
-        </div>
-        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase border ${sevColors.badge}`}>
-          {sev}
-        </span>
-      </div>
-
-      <div className="pt-1">
-        <div className="text-[11px] font-bold text-slate-100 truncate">{data.label}</div>
-        <div className="text-[9px] text-slate-400 truncate mt-0.5">{data.id}</div>
-      </div>
-
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!w-2.5 !h-2.5 !bg-amber-400 !border-2 !border-[#0B0F14]"
-      />
-    </div>
-  );
-};
-
-// Custom Capability Node
-const CapabilityNode: React.FC<NodeProps> = ({ data, selected }) => {
-  return (
-    <div
-      className={`relative px-3 py-2 rounded-lg border font-mono transition-all duration-200 min-w-[170px] bg-[#0E1E18] ${
+      className={`relative px-3.5 py-2.5 rounded-lg border font-mono transition-all duration-200 min-w-[200px] bg-[#0A0A0A] ${
         selected
-          ? 'border-emerald-400 ring-2 ring-emerald-500/40 shadow-glow-emerald'
-          : 'border-emerald-600/70 hover:border-emerald-400 shadow-md'
+          ? 'ring-2 ring-white border-2 border-white shadow-lg'
+          : sev === 'critical'
+          ? 'border-2 border-white'
+          : 'border border-[#333333] hover:border-neutral-400'
       }`}
     >
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-2 !h-2 !bg-emerald-400 !border-2 !border-[#0B0F14]"
+        className="!w-2 !h-2 !bg-white !border !border-black"
       />
 
-      <div className="flex items-center gap-1.5">
-        <Zap className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-        <span className="text-[10px] font-bold text-emerald-300 truncate">{data.label}</span>
+      <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-[#262626]">
+        <div className="flex items-center gap-1.5">
+          <AlertTriangle className="w-3.5 h-3.5 text-white" />
+          <span className="text-[10px] font-bold text-white uppercase">Finding</span>
+        </div>
+        <span
+          className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+            sev === 'critical'
+              ? 'bg-white text-black font-bold'
+              : sev === 'high'
+              ? 'border border-white text-white'
+              : 'border border-neutral-500 text-neutral-300'
+          }`}
+        >
+          {sev}
+        </span>
+      </div>
+
+      <div className="pt-1">
+        <div className="text-[11px] font-bold text-white truncate">{data.label}</div>
+        <div className="text-[9px] text-neutral-400 truncate mt-0.5">{data.id}</div>
       </div>
 
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-2 !h-2 !bg-emerald-400 !border-2 !border-[#0B0F14]"
+        className="!w-2 !h-2 !bg-white !border !border-black"
+      />
+    </div>
+  );
+};
+
+// Custom Monochrome Capability Node
+const CapabilityNode: React.FC<NodeProps> = ({ data, selected }) => {
+  return (
+    <div
+      className={`relative px-3 py-2 rounded border font-mono transition-all duration-200 min-w-[170px] bg-[#0A0A0A] ${
+        selected
+          ? 'border-2 border-white ring-2 ring-white/30 text-white font-bold'
+          : 'border border-neutral-400 hover:border-white text-neutral-200'
+      }`}
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!w-2 !h-2 !bg-white !border !border-black"
+      />
+
+      <div className="flex items-center gap-1.5">
+        <Zap className="w-3 h-3 text-white flex-shrink-0" />
+        <span className="text-[10px] font-bold text-white truncate">{data.label}</span>
+      </div>
+
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!w-2 !h-2 !bg-white !border !border-black"
       />
     </div>
   );
@@ -211,15 +186,10 @@ export const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
   elements,
   onNodeSelect
 }) => {
-  // Convert elements into ReactFlow nodes & edges with layout computation
   const { initialNodes, initialEdges } = useMemo(() => {
     const rawNodes = elements.nodes || [];
     const rawEdges = elements.edges || [];
 
-    // Categorize nodes into 3 architectural columns
-    // Col 0: DMZ / Ingress Assets & initial findings
-    // Col 1: Internal pivot hosts, scanner findings, capabilities
-    // Col 2: Target Crown Jewels / Internal DBs
     const col0: any[] = [];
     const col1: any[] = [];
     const col2: any[] = [];
@@ -227,7 +197,6 @@ export const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
     rawNodes.forEach((n) => {
       const d = n.data || {};
       const zone = (d.zone || '').toLowerCase();
-      const type = (d.type || '').toLowerCase();
       const name = (d.label || d.id || '').toLowerCase();
 
       if (zone.includes('dmz') || name.includes('app.lab') || name.includes('gateway')) {
@@ -268,7 +237,6 @@ export const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
       });
     });
 
-    // If all nodes fell in one column, fall back to safe grid
     if (flowNodes.length === 0 && rawNodes.length > 0) {
       rawNodes.forEach((n, idx) => {
         const d = n.data || {};
@@ -293,13 +261,13 @@ export const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
         animated: isDerived,
         type: 'smoothstep',
         style: {
-          stroke: isDerived ? '#818CF8' : '#334155',
+          stroke: isDerived ? '#FFFFFF' : '#444444',
           strokeWidth: isDerived ? 2.5 : 1.5,
           strokeDasharray: isDerived ? '6 4' : undefined
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: isDerived ? '#818CF8' : '#64748B',
+          color: isDerived ? '#FFFFFF' : '#888888',
           width: 14,
           height: 14
         }
@@ -312,7 +280,6 @@ export const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Sync state whenever elements update
   useEffect(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
@@ -334,7 +301,7 @@ export const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
   }, [onNodeSelect]);
 
   return (
-    <div className="relative w-full h-full min-h-[500px] bg-[#0B0F14] select-none">
+    <div className="relative w-full h-full min-h-[500px] bg-black select-none">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -350,26 +317,24 @@ export const ReactFlowGraph: React.FC<ReactFlowGraphProps> = ({
         proOptions={{ hideAttribution: true }}
       >
         <Background
-          color="#1F2A37"
+          color="#262626"
           gap={24}
           size={1.5}
           variant={BackgroundVariant.Dots}
         />
 
         <Controls
-          className="!bg-[#121821] !border !border-[#1F2A37] !rounded-lg !shadow-xl !overflow-hidden [&>button]:!bg-[#121821] [&>button]:!border-b [&>button]:!border-[#1F2A37] [&>button]:!text-slate-300 hover:[&>button]:!text-white hover:[&>button]:!bg-[#1A2230] [&>button>svg]:!fill-current"
+          className="!bg-black !border !border-[#333333] !rounded !shadow-xl !overflow-hidden [&>button]:!bg-black [&>button]:!border-b [&>button]:!border-[#333333] [&>button]:!text-neutral-400 hover:[&>button]:!text-white hover:[&>button]:!bg-[#181818] [&>button>svg]:!fill-current"
         />
 
         <MiniMap
           nodeColor={(n: any) => {
-            if (n.type === 'finding') return '#EF4444';
-            if (n.type === 'capability') return '#10B981';
-            const zone = (n.data?.zone || '').toLowerCase();
-            if (zone.includes('dmz')) return '#F59E0B';
-            return '#6366F1';
+            if (n.type === 'finding') return '#E5E5E5';
+            if (n.type === 'capability') return '#A3A3A3';
+            return '#FFFFFF';
           }}
-          className="!bg-[#0E1520] !border !border-[#1F2A37] !rounded-lg"
-          maskColor="rgba(11, 15, 20, 0.7)"
+          className="!bg-[#0A0A0A] !border !border-[#333333] !rounded"
+          maskColor="rgba(0, 0, 0, 0.8)"
         />
       </ReactFlow>
     </div>

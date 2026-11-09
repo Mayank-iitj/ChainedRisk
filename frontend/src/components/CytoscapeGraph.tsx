@@ -180,31 +180,31 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
   return (
     <div className="relative w-full h-full min-h-[500px] bg-[#0B0F14] border border-[#1F2A37] rounded-xl overflow-hidden flex flex-col">
       {/* Controls Bar */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-[#121821]/90 border border-[#1F2A37] px-2.5 py-1.5 rounded-lg shadow-lg backdrop-blur-md">
+      <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-[#0A0A0A]/90 border border-[#262626] px-2.5 py-1.5 rounded-lg shadow-lg backdrop-blur-md">
         <button
           onClick={handleZoomIn}
-          className="p-1 hover:text-indigo-400 text-slate-400 transition cursor-pointer"
+          className="p-1 hover:text-white text-neutral-400 transition cursor-pointer"
           title="Zoom In"
         >
           <ZoomIn className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={handleZoomOut}
-          className="p-1 hover:text-indigo-400 text-slate-400 transition cursor-pointer"
+          className="p-1 hover:text-white text-neutral-400 transition cursor-pointer"
           title="Zoom Out"
         >
           <ZoomOut className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={handleFit}
-          className="p-1 hover:text-indigo-400 text-slate-400 transition cursor-pointer"
+          className="p-1 hover:text-white text-neutral-400 transition cursor-pointer"
           title="Fit Screen"
         >
           <Maximize2 className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={handleRelayout}
-          className="p-1 hover:text-indigo-400 text-slate-400 transition cursor-pointer"
+          className="p-1 hover:text-white text-neutral-400 transition cursor-pointer"
           title="Reorganize Layout"
         >
           <RefreshCw className="w-3.5 h-3.5" />
@@ -212,53 +212,52 @@ export const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({ elements, onNode
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 z-10 bg-[#121821]/90 border border-[#1F2A37] px-3 py-2 rounded-lg text-[10px] font-mono text-slate-400 shadow-lg backdrop-blur-md space-y-1.5">
+      <div className="absolute bottom-4 left-4 z-10 bg-[#0A0A0A]/90 border border-[#262626] px-3 py-2 rounded-lg text-[10px] font-mono text-neutral-400 shadow-lg backdrop-blur-md space-y-1.5">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded bg-[#161F2E] border border-indigo-500"></span>
+          <span className="w-2.5 h-2.5 rounded bg-black border border-white"></span>
           <span>Asset (Host/Container)</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rotate-45 bg-[#2A1215] border border-red-500"></span>
+          <span className="w-2.5 h-2.5 rotate-45 bg-white border border-white"></span>
           <span>Scanner Finding</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#0F261E] border border-emerald-500"></span>
+          <span className="w-2.5 h-2.5 rounded-full bg-black border border-neutral-400"></span>
           <span>Capability Token</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-4 h-0.5 border-b border-indigo-400 border-dashed"></span>
+          <span className="w-4 h-0.5 border-b border-white border-dashed"></span>
           <span>Derived Pivot Edge</span>
         </div>
       </div>
 
       {/* Canvas */}
-      <div ref={containerRef} className="flex-1 w-full h-full cursor-grab active:cursor-grabbing bg-[#0B0F14]" />
+      <div ref={containerRef} className="flex-1 w-full h-full cursor-grab active:cursor-grabbing bg-black" />
 
       {/* Node Inspector Drawer */}
       {selectedNode && (
-        <div className="absolute top-4 right-4 z-10 w-80 bg-[#121821]/95 border border-[#1F2A37] rounded-xl p-4 shadow-2xl text-xs space-y-3 max-h-[90%] overflow-y-auto backdrop-blur-md">
-          <div className="flex justify-between items-center border-b border-[#1F2A37] pb-2">
-            <span className="font-mono text-indigo-400 font-bold uppercase text-[11px] tracking-wider">{selectedNode.type} Node</span>
+        <div className="absolute top-4 right-4 z-10 w-80 bg-[#0A0A0A]/95 border border-[#262626] rounded-xl p-4 shadow-2xl text-xs space-y-3 max-h-[90%] overflow-y-auto backdrop-blur-md">
+          <div className="flex justify-between items-center border-b border-[#262626] pb-2">
+            <span className="font-mono text-white font-bold uppercase text-[11px] tracking-wider">{selectedNode.type} Node</span>
             <button
               onClick={() => setSelectedNode(null)}
-              className="text-slate-400 hover:text-slate-200 cursor-pointer"
+              className="text-neutral-400 hover:text-white cursor-pointer"
             >
               ✕
             </button>
           </div>
           <div>
-            <div className="text-slate-100 font-bold text-sm">{selectedNode.label}</div>
-            <div className="text-slate-400 font-mono text-[10px] mt-0.5">ID: {selectedNode.id}</div>
+            <div className="text-white font-bold text-sm">{selectedNode.label}</div>
+            <div className="text-neutral-400 font-mono text-[10px] mt-0.5">ID: {selectedNode.id}</div>
           </div>
 
           {selectedNode.severity && (
             <div>
-              <span className="text-slate-400 block font-mono text-[10px] uppercase">Severity</span>
+              <span className="text-neutral-400 block font-mono text-[10px] uppercase">Severity</span>
               <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase mt-1 ${
-                selectedNode.severity === 'critical' ? 'bg-red-950/60 text-red-300 border border-red-800/80' :
-                selectedNode.severity === 'high' ? 'bg-amber-950/60 text-amber-300 border border-amber-800/80' :
-                selectedNode.severity === 'medium' ? 'bg-yellow-950/60 text-yellow-300 border border-yellow-800/80' :
-                'bg-cyan-950/60 text-cyan-300 border border-cyan-800/80'
+                selectedNode.severity === 'critical' ? 'bg-white text-black font-bold' :
+                selectedNode.severity === 'high' ? 'border border-white text-white bg-black' :
+                'border border-neutral-600 text-neutral-300 bg-black'
               }`}>
                 {selectedNode.severity}
               </span>

@@ -125,44 +125,44 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
   return (
     <div className="space-y-6 pb-8 select-none">
       {/* Header */}
-      <div className="reveal-block flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="text-[11px] font-mono tracking-wider text-[#64748B] uppercase">
-            <span className="text-[#6366F1] font-semibold">ATTACK SURFACE</span> // PERIMETER INVENTORY
+          <div className="text-[11px] font-mono tracking-wider text-neutral-400 uppercase">
+            <span className="text-white font-semibold">ATTACK SURFACE</span> // PERIMETER INVENTORY
           </div>
           <h2 className="text-xl font-bold text-white tracking-tight mt-0.5 flex items-center gap-2">
-            <Server className="w-5 h-5 text-[#6366F1]" />
+            <Server className="w-5 h-5 text-white" />
             <span>Asset Inventory & Network Zones</span>
-            <span className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full ml-1">
+            <span className="bg-white text-black text-xs font-mono font-bold px-2.5 py-0.5 rounded-full ml-1">
               {assets.length} Assets
             </span>
           </h2>
-          <p className="text-xs text-[#64748B] mt-0.5 font-mono">
+          <p className="text-xs text-neutral-400 mt-0.5 font-mono">
             DMZ endpoints, internal pivot nodes, and high-value crown jewel datastores mapped into the correlation graph.
           </p>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-[#6366F1] hover:bg-[#4F46E5] text-white font-mono font-bold px-4 py-2 rounded-xl text-xs shadow-glow-indigo transition cursor-pointer"
+          className="flex items-center gap-2 bg-white hover:bg-neutral-200 text-black font-mono font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>ADD PERIMETER ASSET</span>
         </button>
       </div>
 
       {/* Filter Chips Bar */}
-      <div className="reveal-block bg-[#121821] border border-[#1F2A37] rounded-xl p-4 shadow-card flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+      <div className="bg-[#0A0A0A] border border-[#262626] rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-1">Zone:</span>
+          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mr-1">Zone:</span>
           {(['all', 'dmz', 'internal', 'lab', 'external'] as const).map((z) => (
             <button
               key={z}
               onClick={() => setSelectedZone(z)}
               className={`px-3 py-1 rounded-lg uppercase text-[10px] transition cursor-pointer ${
                 selectedZone === z
-                  ? 'bg-[#6366F1] text-white font-bold'
-                  : 'bg-[#0B0F14] hover:text-white text-slate-400 border border-[#1F2A37]'
+                  ? 'bg-white text-black font-bold'
+                  : 'bg-black hover:text-white text-neutral-400 border border-[#262626]'
               }`}
             >
               {z === 'all' ? 'All Zones' : z.toUpperCase()}
@@ -171,24 +171,24 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
         </div>
 
         <div className="min-w-[240px] relative">
-          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+          <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-3 top-2.5" />
           <input
             type="text"
             placeholder="Search by name, IP, service..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#0B0F14] border border-[#1F2A37] rounded-lg pl-8 pr-3 py-1.5 text-white placeholder:text-[#64748B] focus:outline-none focus:border-[#6366F1] text-xs font-mono"
+            className="w-full bg-black border border-[#262626] rounded-lg pl-8 pr-3 py-1.5 text-white placeholder:text-neutral-500 focus:outline-none focus:border-white text-xs font-mono"
           />
         </div>
       </div>
 
       {/* Assets Grid / Table */}
-      <div className="reveal-block bg-[#121821] border border-[#1F2A37] rounded-xl shadow-card overflow-hidden">
+      <div className="bg-[#0A0A0A] border border-[#262626] rounded-xl overflow-hidden">
         {filteredAssets.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 space-y-3 font-mono">
-            <Server className="w-10 h-10 text-slate-600 mx-auto" />
+          <div className="p-12 text-center text-neutral-500 space-y-3 font-mono">
+            <Server className="w-10 h-10 text-neutral-600 mx-auto" />
             <h3 className="text-sm font-bold text-white uppercase">No perimeter assets found</h3>
-            <p className="text-xs max-w-sm mx-auto text-slate-400 font-sans">
+            <p className="text-xs max-w-sm mx-auto text-neutral-400 font-sans">
               No assets matched the current zone filter. Add a new target asset or ingest network scan results.
             </p>
           </div>
@@ -196,7 +196,7 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
               <thead>
-                <tr className="bg-[#0B0F14] text-slate-400 text-[10px] uppercase tracking-wider border-b border-[#1F2A37]">
+                <tr className="bg-black text-neutral-400 text-[10px] uppercase tracking-wider border-b border-[#262626]">
                   <th className="py-3 px-4">ASSET IDENTITY</th>
                   <th className="py-3 px-3">ZONE</th>
                   <th className="py-3 px-3">TYPE</th>
@@ -206,33 +206,27 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                   <th className="py-3 px-4 text-right">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1F2A37]">
+              <tbody className="divide-y divide-[#262626]">
                 {filteredAssets.map((asset) => {
                   const services = asset.props?.services || [];
                   const isJewel = (asset.props?.datastores && asset.props.datastores.length > 0) || asset.zone === 'internal';
                   return (
-                    <tr key={asset.id} className="hover:bg-white/[0.02] transition">
+                    <tr key={asset.id} className="hover:bg-white/[0.03] transition">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
-                            asset.zone === 'dmz'
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                              : isJewel
-                              ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
-                              : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
-                          }`}>
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-black border border-white text-white">
                             {asset.zone === 'dmz' ? <Globe className="w-4 h-4" /> : isJewel ? <Database className="w-4 h-4" /> : <Server className="w-4 h-4" />}
                           </div>
                           <div>
                             <div className="font-semibold text-white text-xs flex items-center gap-1.5 font-mono">
                               <span>{asset.name}</span>
                               {isJewel && (
-                                <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[9px] font-bold px-1.5 py-0.2 rounded">
+                                <span className="bg-white text-black text-[9px] font-bold px-1.5 py-0.2 rounded">
                                   CROWN JEWEL
                                 </span>
                               )}
                             </div>
-                            <div className="text-[10px] text-slate-500 font-mono">{asset.id}</div>
+                            <div className="text-[10px] text-neutral-500 font-mono">{asset.id}</div>
                           </div>
                         </div>
                       </td>
@@ -240,20 +234,20 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                       <td className="py-3.5 px-3">
                         <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
                           asset.zone === 'dmz'
-                            ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                            ? 'bg-white text-black font-bold'
                             : asset.zone === 'internal'
-                            ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/30'
-                            : 'bg-slate-800 text-slate-300 border border-slate-700'
+                            ? 'border-2 border-white text-white bg-black'
+                            : 'bg-black text-neutral-300 border border-[#262626]'
                         }`}>
                           {asset.zone}
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-3 font-semibold text-slate-300">
+                      <td className="py-3.5 px-3 font-semibold text-neutral-300">
                         {asset.type}
                       </td>
 
-                      <td className="py-3.5 px-3 text-cyan-300 text-xs">
+                      <td className="py-3.5 px-3 text-white text-xs">
                         {asset.props?.ip || '10.77.0.x'}
                       </td>
 
@@ -261,21 +255,21 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                         {services.length > 0 ? (
                           <div className="flex items-center gap-1 flex-wrap">
                             {services.map((s: any, idx: number) => (
-                              <span key={idx} className="bg-[#0B0F14] text-slate-300 text-[10px] px-2 py-0.5 rounded border border-[#1F2A37]">
+                              <span key={idx} className="bg-black text-neutral-300 text-[10px] px-2 py-0.5 rounded border border-[#262626]">
                                 :{s.port || 80} ({s.product || 'tcp'})
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-slate-600 text-[11px] italic">No open ports</span>
+                          <span className="text-neutral-600 text-[11px] italic">No open ports</span>
                         )}
                       </td>
 
-                      <td className="py-3.5 px-3 text-[11px] text-slate-400">
+                      <td className="py-3.5 px-3 text-[11px] text-neutral-400">
                         {asset.props?.datastores && asset.props.datastores.length > 0 ? (
-                          <span className="text-purple-300 font-semibold">{asset.props.datastores.join(', ')}</span>
+                          <span className="text-white font-semibold">{asset.props.datastores.join(', ')}</span>
                         ) : (
-                          <span className="text-slate-600">—</span>
+                          <span className="text-neutral-600">—</span>
                         )}
                       </td>
 
@@ -285,7 +279,7 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                             <button
                               onClick={() => onSelectFindingQuery(asset.id)}
                               title="View Findings for Asset"
-                              className="p-1.5 text-indigo-400 hover:text-white hover:bg-white/5 rounded-lg transition cursor-pointer"
+                              className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
                             </button>
@@ -293,7 +287,7 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                           <button
                             onClick={() => handleDeleteAsset(asset.id, asset.name)}
                             title="Remove Asset"
-                            className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
+                            className="p-1.5 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded-lg transition cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -311,22 +305,22 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
       {/* Add Perimeter Asset Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#121821] border border-[#1F2A37] rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-white font-mono">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1F2A37]">
+          <div className="bg-[#0A0A0A] border border-[#262626] rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-white font-mono">
+            <div className="flex items-center justify-between pb-3 border-b border-[#262626]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase">
-                <Plus className="w-4 h-4 text-indigo-400" />
+                <Plus className="w-4 h-4 text-white" />
                 <span>Register Perimeter Asset</span>
               </h3>
               <button
                 onClick={() => { setShowAddModal(false); resetForm(); }}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="text-neutral-400 hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {error && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-xl">
+              <div className="p-3 bg-black border border-white text-white text-xs rounded-xl">
                 {error}
               </div>
             )}
@@ -334,23 +328,23 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
             <form onSubmit={handleCreateAsset} className="space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Asset Hostname *</label>
+                  <label className="block text-neutral-400 mb-1 uppercase text-[10px]">Asset Hostname *</label>
                   <input
                     type="text"
                     required
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="e.g. auth-db.internal"
-                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
+                    className="w-full px-3 py-2 bg-black border border-[#262626] rounded-xl text-white focus:outline-none focus:border-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Asset Type</label>
+                  <label className="block text-neutral-400 mb-1 uppercase text-[10px]">Asset Type</label>
                   <select
                     value={newType}
                     onChange={(e) => setNewType(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
+                    className="w-full px-3 py-2 bg-black border border-[#262626] rounded-xl text-white focus:outline-none focus:border-white"
                   >
                     <option value="Host">Host / Virtual Machine</option>
                     <option value="Container">Docker Container</option>
@@ -363,11 +357,11 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Network Zone</label>
+                  <label className="block text-neutral-400 mb-1 uppercase text-[10px]">Network Zone</label>
                   <select
                     value={newZone}
                     onChange={(e) => setNewZone(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
+                    className="w-full px-3 py-2 bg-black border border-[#262626] rounded-xl text-white focus:outline-none focus:border-white"
                   >
                     <option value="dmz">DMZ (Public-Facing)</option>
                     <option value="internal">Internal Core (Isolated)</option>
@@ -377,66 +371,66 @@ export const AssetsInventory: React.FC<AssetsInventoryProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">IP Address</label>
+                  <label className="block text-neutral-400 mb-1 uppercase text-[10px]">IP Address</label>
                   <input
                     type="text"
                     value={newIp}
                     onChange={(e) => setNewIp(e.target.value)}
                     placeholder="10.77.0.x"
-                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
+                    className="w-full px-3 py-2 bg-black border border-[#262626] rounded-xl text-white focus:outline-none focus:border-white"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Exposed Port</label>
+                  <label className="block text-neutral-400 mb-1 uppercase text-[10px]">Exposed Port</label>
                   <input
                     type="number"
                     value={newPort}
                     onChange={(e) => setNewPort(e.target.value)}
                     placeholder="5432, 6379, 80"
-                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
+                    className="w-full px-3 py-2 bg-black border border-[#262626] rounded-xl text-white focus:outline-none focus:border-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 mb-1 uppercase text-[10px]">Technology / Banner</label>
+                  <label className="block text-neutral-400 mb-1 uppercase text-[10px]">Technology / Banner</label>
                   <input
                     type="text"
                     value={newTech}
                     onChange={(e) => setNewTech(e.target.value)}
                     placeholder="PostgreSQL 15, Redis 7"
-                    className="w-full px-3 py-2 bg-[#0B0F14] border border-[#1F2A37] rounded-xl text-white focus:outline-none focus:border-[#6366F1]"
+                    className="w-full px-3 py-2 bg-black border border-[#262626] rounded-xl text-white focus:outline-none focus:border-white"
                   />
                 </div>
               </div>
 
-              <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl flex items-center gap-2.5">
+              <div className="p-3 bg-black border border-[#262626] rounded-xl flex items-center gap-2.5">
                 <input
                   type="checkbox"
                   id="crownJewelCheck"
                   checked={isCrownJewel}
                   onChange={(e) => setIsCrownJewel(e.target.checked)}
-                  className="w-4 h-4 rounded text-purple-600 border-slate-700 bg-slate-900 cursor-pointer"
+                  className="w-4 h-4 rounded border-neutral-600 bg-black accent-white cursor-pointer"
                 />
-                <label htmlFor="crownJewelCheck" className="text-purple-300 font-semibold cursor-pointer text-xs">
+                <label htmlFor="crownJewelCheck" className="text-white font-semibold cursor-pointer text-xs">
                   Tag as Crown Jewel (Target requiring HITL blast radius containment)
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1F2A37]">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#262626]">
                 <button
                   type="button"
                   onClick={() => { setShowAddModal(false); resetForm(); }}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl cursor-pointer"
+                  className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold rounded-xl shadow-glow-indigo cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 bg-white hover:bg-neutral-200 text-black font-bold rounded-xl cursor-pointer disabled:opacity-50"
                 >
                   {saving ? 'Registering...' : 'Add to Perimeter'}
                 </button>

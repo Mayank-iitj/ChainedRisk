@@ -42,7 +42,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [orgName, setOrgName] = useState(currentUser.org_name || 'Apex Cyber Labs');
   const [industry, setIndustry] = useState('Financial Services / FinTech');
   const [environment, setEnvironment] = useState('AWS Multi-Account + Docker Lab');
-  const [riskTolerance, setRiskTolerance] = useState('standard'); // zero_tolerance, standard, high_gain_only
+  const [riskTolerance, setRiskTolerance] = useState('standard');
 
   // Step 2: Assessment Scope & Boundaries
   const [projectName, setProjectName] = useState(`${orgName} Core Assessment`);
@@ -131,7 +131,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     };
 
     try {
-      // Simulate real step updates for awesome UX
       await new Promise((r) => setTimeout(r, 600));
       setProvisioningLogs((prev) => [...prev, 'INGEST: Normalizing security scan logs & evidence trees...']);
 
@@ -158,27 +157,23 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
-      {/* Background Ambient Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-[128px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/15 rounded-full blur-[128px] pointer-events-none" />
-
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans select-none">
       {/* Main Container Card */}
-      <div className="relative z-10 w-full max-w-3xl bg-[#0f172a]/90 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-3xl bg-[#0A0A0A] border border-[#262626] rounded-3xl shadow-2xl overflow-hidden">
         {/* Header Bar */}
-        <div className="border-b border-slate-800 px-8 py-6 bg-slate-900/60 flex items-center justify-between">
+        <div className="border-b border-[#262626] px-8 py-6 bg-black flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
-              <Shield className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-white text-black flex items-center justify-center shadow-lg">
+              <Shield className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-extrabold tracking-tight text-white">ChainedRisk</span>
-                <span className="text-[10px] font-mono bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-sm font-extrabold tracking-tight text-white font-mono">ChainedRisk</span>
+                <span className="text-[10px] font-mono bg-white text-black px-2 py-0.5 rounded-full font-bold">
                   INITIAL ONBOARDING
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-neutral-400 mt-0.5">
                 Configure your organization perimeter, target scope, and safety boundaries.
               </p>
             </div>
@@ -202,27 +197,27 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     onClick={() => !loading && setCurrentStep(s.step as any)}
                     className={`p-3 rounded-2xl border transition cursor-pointer ${
                       isActive
-                        ? 'bg-indigo-950/40 border-indigo-500/60 shadow-sm'
+                        ? 'bg-black border-2 border-white'
                         : isPast
-                        ? 'bg-slate-900/40 border-slate-700/60'
-                        : 'bg-slate-950/20 border-slate-800/40 opacity-60'
+                        ? 'bg-[#141414] border-neutral-700'
+                        : 'bg-black border-[#262626] opacity-60'
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       <div
                         className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           isActive
-                            ? 'bg-indigo-600 text-white'
+                            ? 'bg-white text-black'
                             : isPast
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-slate-800 text-slate-400'
+                            ? 'bg-neutral-300 text-black'
+                            : 'bg-neutral-800 text-neutral-400'
                         }`}
                       >
                         {isPast ? '✓' : s.step}
                       </div>
                       <span className="text-xs font-bold text-white">{s.label}</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-1 pl-7">{s.desc}</div>
+                    <div className="text-[10px] text-neutral-400 mt-1 pl-7">{s.desc}</div>
                   </div>
                 );
               })}
@@ -232,8 +227,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
         {/* Error Notification */}
         {error && (
-          <div className="mx-8 mt-4 p-3 bg-red-950/50 border border-red-500/50 text-red-300 text-xs rounded-xl flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+          <div className="mx-8 mt-4 p-3 bg-black border border-white text-white text-xs rounded-xl flex items-center gap-2 font-mono">
+            <AlertTriangle className="w-4 h-4 text-white flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -244,22 +239,22 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             /* Live Terminal Provisioning State */
             <div className="space-y-4 py-6">
               <div className="text-center space-y-2">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 mx-auto animate-pulse">
+                <div className="w-12 h-12 rounded-2xl bg-black border border-white flex items-center justify-center text-white mx-auto animate-pulse">
                   <Cpu className="w-6 h-6 animate-spin" />
                 </div>
-                <h4 className="text-base font-extrabold text-white tracking-tight">
+                <h4 className="text-base font-extrabold text-white tracking-tight font-mono">
                   Provisioning Security Enclave & Correlating Attacks...
                 </h4>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                <p className="text-xs text-neutral-400 max-w-sm mx-auto">
                   Applying graph invariants, generating baseline telemetry, and verifying HMAC signature gates.
                 </p>
               </div>
 
               {/* Terminal Box */}
-              <div className="bg-black/80 border border-slate-800 rounded-2xl p-4 font-mono text-xs text-indigo-300/90 space-y-1.5 shadow-inner max-h-56 overflow-y-auto">
+              <div className="bg-black border border-[#262626] rounded-2xl p-4 font-mono text-xs text-neutral-200 space-y-1.5 shadow-inner max-h-56 overflow-y-auto">
                 {provisioningLogs.map((log, idx) => (
                   <div key={idx} className="flex items-start gap-2">
-                    <span className="text-emerald-400 font-bold">$</span>
+                    <span className="text-white font-bold">$</span>
                     <span>{log}</span>
                   </div>
                 ))}
@@ -270,11 +265,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                  <label className="block text-xs font-bold text-neutral-300 mb-1">
                     Organization / Company Name *
                   </label>
                   <div className="relative">
-                    <Building className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                    <Building className="w-4 h-4 text-neutral-500 absolute left-3.5 top-3" />
                     <input
                       type="text"
                       required
@@ -284,19 +279,19 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         setProjectName(`${e.target.value} Core Assessment`);
                       }}
                       placeholder="e.g. Acme FinTech Labs"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-indigo-500 text-white"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs bg-black border border-[#262626] rounded-xl focus:outline-none focus:border-white text-white"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                  <label className="block text-xs font-bold text-neutral-300 mb-1">
                     Industry Vertical *
                   </label>
                   <select
                     value={industry}
                     onChange={(e) => setIndustry(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-indigo-500 text-white"
+                    className="w-full px-3 py-2.5 text-xs bg-black border border-[#262626] rounded-xl focus:outline-none focus:border-white text-white"
                   >
                     <option value="Financial Services / FinTech">Financial Services / FinTech</option>
                     <option value="Healthcare & Life Sciences">Healthcare & Life Sciences</option>
@@ -308,7 +303,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-neutral-300 mb-1">
                   Primary Cloud & Hosting Environment *
                 </label>
                 <div className="grid grid-cols-3 gap-3">
@@ -323,11 +318,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                       onClick={() => setEnvironment(env.id)}
                       className={`p-3 rounded-xl border text-left flex items-center gap-3 transition cursor-pointer ${
                         environment === env.id
-                          ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm'
-                          : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white'
+                          ? 'bg-black border-2 border-white text-white'
+                          : 'bg-black border border-[#262626] text-neutral-400 hover:text-white'
                       }`}
                     >
-                      <env.icon className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                      <env.icon className="w-4 h-4 text-white flex-shrink-0" />
                       <span className="text-xs font-bold">{env.label}</span>
                     </button>
                   ))}
@@ -335,7 +330,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-2">
+                <label className="block text-xs font-bold text-neutral-300 mb-2">
                   Risk Tolerance & Alert Fatigue Policy
                 </label>
                 <div className="grid grid-cols-3 gap-3">
@@ -361,30 +356,30 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                       onClick={() => setRiskTolerance(p.id)}
                       className={`p-3.5 rounded-xl border transition cursor-pointer space-y-1 ${
                         riskTolerance === p.id
-                          ? 'bg-indigo-950/40 border-indigo-500 text-white'
-                          : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200'
+                          ? 'bg-black border-2 border-white text-white'
+                          : 'bg-black border border-[#262626] text-neutral-400 hover:text-neutral-200'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-extrabold">{p.title}</span>
                         {riskTolerance === p.id && (
-                          <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                          <span className="w-2 h-2 rounded-full bg-white"></span>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-400 leading-snug">{p.desc}</p>
+                      <p className="text-[11px] text-neutral-400 leading-snug">{p.desc}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4 border-t border-slate-800">
+              <div className="flex justify-end pt-4 border-t border-[#262626]">
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-600/25 transition cursor-pointer"
+                  className="px-5 py-2.5 bg-white hover:bg-neutral-200 text-black font-bold text-xs rounded-xl flex items-center gap-2 transition cursor-pointer"
                 >
                   <span>Next: Define Perimeter Scope</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </div>
             </div>
@@ -392,7 +387,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             /* Step 2: Perimeter Scope & Targets */
             <div className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-neutral-300 mb-1">
                   Primary Assessment Project Name *
                 </label>
                 <input
@@ -401,17 +396,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   placeholder="e.g. Staging VPC Assessment"
-                  className="w-full px-3.5 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-indigo-500 text-white"
+                  className="w-full px-3.5 py-2.5 text-xs bg-black border border-[#262626] rounded-xl focus:outline-none focus:border-white text-white font-mono"
                 />
               </div>
 
               {/* In-Scope CIDRs */}
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="block text-xs font-bold text-slate-300">
+                  <label className="block text-xs font-bold text-neutral-300">
                     Authorized In-Scope CIDR Ranges *
                   </label>
-                  <span className="text-[10px] text-indigo-400 font-mono">
+                  <span className="text-[10px] text-neutral-400 font-mono">
                     Enforcing INV-1 Lab-Only Boundary
                   </span>
                 </div>
@@ -422,12 +417,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     value={newCidr}
                     onChange={(e) => setNewCidr(e.target.value)}
                     placeholder="e.g. 10.77.0.0/24 or 172.20.0.0/16"
-                    className="flex-1 px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-indigo-500 text-white font-mono"
+                    className="flex-1 px-3 py-2 text-xs bg-black border border-[#262626] rounded-xl focus:outline-none focus:border-white text-white font-mono"
                   />
                   <button
                     type="button"
                     onClick={addCidr}
-                    className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                    className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer border border-[#262626]"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add CIDR</span>
@@ -438,14 +433,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   {scopeCidrs.map((cidr) => (
                     <span
                       key={cidr}
-                      className="bg-indigo-950/60 border border-indigo-500/40 text-indigo-300 text-xs font-mono px-3 py-1 rounded-lg flex items-center gap-2"
+                      className="bg-black border border-white text-white text-xs font-mono px-3 py-1 rounded-lg flex items-center gap-2"
                     >
                       <span>{cidr}</span>
                       {scopeCidrs.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeCidr(cidr)}
-                          className="hover:text-red-400"
+                          className="hover:underline font-bold"
                         >
                           ×
                         </button>
@@ -457,37 +452,37 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
               {/* Ingress DMZ Node & Crown Jewels Overview */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3.5 bg-slate-900/60 border border-slate-800 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-200">
+                <div className="p-3.5 bg-black border border-[#262626] rounded-xl space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-white font-mono">
                     <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      <span className="w-2 h-2 rounded-full bg-white" />
                       DMZ Ingress Assets ({ingressNodes.length})
                     </span>
-                    <span className="text-[10px] text-slate-500 font-mono">10.77.0.10</span>
+                    <span className="text-[10px] text-neutral-400 font-mono">10.77.0.10</span>
                   </div>
-                  <div className="text-[11px] text-slate-400 space-y-1">
+                  <div className="text-[11px] text-neutral-400 space-y-1">
                     {ingressNodes.map((ing, i) => (
                       <div key={i} className="flex justify-between font-mono text-[10px]">
                         <span className="text-white">{ing.name}</span>
-                        <span className="text-indigo-400">{ing.services.join(', ')}</span>
+                        <span className="text-neutral-300">{ing.services.join(', ')}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-slate-900/60 border border-slate-800 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-200">
+                <div className="p-3.5 bg-black border border-[#262626] rounded-xl space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-white font-mono">
                     <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-red-500" />
+                      <span className="w-2 h-2 rounded-full border border-white bg-black" />
                       Crown Jewel Targets ({crownJewels.length})
                     </span>
-                    <span className="text-[10px] text-slate-500 font-mono">10.77.0.11 - 12</span>
+                    <span className="text-[10px] text-neutral-400 font-mono">10.77.0.11 - 12</span>
                   </div>
-                  <div className="text-[11px] text-slate-400 space-y-1">
+                  <div className="text-[11px] text-neutral-400 space-y-1">
                     {crownJewels.map((jwl, i) => (
                       <div key={i} className="flex justify-between font-mono text-[10px]">
                         <span className="text-white">{jwl.name}</span>
-                        <span className="text-emerald-400">{jwl.datastores.join(', ')}</span>
+                        <span className="text-neutral-300">{jwl.datastores.join(', ')}</span>
                       </div>
                     ))}
                   </div>
@@ -495,21 +490,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               </div>
 
               {/* Safety Invariant Badges */}
-              <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between text-[11px]">
-                <div className="flex items-center gap-2 text-slate-300">
-                  <Lock className="w-4 h-4 text-emerald-400" />
+              <div className="p-3.5 bg-black border border-[#262626] rounded-xl flex items-center justify-between text-[11px]">
+                <div className="flex items-center gap-2 text-neutral-300 font-mono">
+                  <Lock className="w-4 h-4 text-white" />
                   <span>
                     Cryptographic Safety Invariants (INV-1 through INV-12) will be strictly enforced.
                   </span>
                 </div>
-                <span className="text-emerald-400 font-bold font-mono">ENFORCED</span>
+                <span className="text-black bg-white px-2 py-0.5 rounded font-bold font-mono">ENFORCED</span>
               </div>
 
-              <div className="flex justify-between pt-4 border-t border-slate-800">
+              <div className="flex justify-between pt-4 border-t border-[#262626]">
                 <button
                   type="button"
                   onClick={() => setCurrentStep(1)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition cursor-pointer"
+                  className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition cursor-pointer border border-[#262626]"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Back</span>
@@ -518,10 +513,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <button
                   type="button"
                   onClick={() => setCurrentStep(3)}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-600/25 transition cursor-pointer"
+                  className="px-5 py-2.5 bg-white hover:bg-neutral-200 text-black font-bold text-xs rounded-xl flex items-center gap-2 transition cursor-pointer"
                 >
                   <span>Next: Integrations & Telemetry</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </div>
             </div>
@@ -529,10 +524,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             /* Step 3: Ingestion Pipeline & Telemetry Baseline */
             <div className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-2">
+                <label className="block text-xs font-bold text-neutral-300 mb-2 font-mono">
                   Active Tool Pipelines Deployed
                 </label>
-                <div className="grid grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-4 gap-2.5 font-mono">
                   {[
                     { id: 'nmap', name: 'Nmap / Masscan', desc: 'Port & Service Scan' },
                     { id: 'gitleaks', name: 'Gitleaks', desc: 'Secret & SCM Leaks' },
@@ -546,21 +541,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         onClick={() => toggleScanner(tool.id)}
                         className={`p-3 rounded-xl border text-left cursor-pointer transition ${
                           isSelected
-                            ? 'bg-indigo-950/50 border-indigo-500 text-white shadow-sm'
-                            : 'bg-slate-900/40 border-slate-800 text-slate-500'
+                            ? 'bg-black border-2 border-white text-white'
+                            : 'bg-black border border-[#262626] text-neutral-500 hover:border-neutral-700'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold">{tool.name}</span>
                           <span
                             className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[9px] font-bold ${
-                              isSelected ? 'bg-indigo-600 text-white' : 'border border-slate-700'
+                              isSelected ? 'bg-white text-black' : 'border border-neutral-700'
                             }`}
                           >
                             {isSelected ? '✓' : ''}
                           </span>
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-1">{tool.desc}</p>
+                        <p className="text-[10px] text-neutral-400 mt-1">{tool.desc}</p>
                       </div>
                     );
                   })}
@@ -570,13 +565,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               {/* Webhook & Notification Channel */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                  <label className="block text-xs font-bold text-neutral-300 mb-1">
                     HITL Approval Notification Channel
                   </label>
                   <select
                     value={notificationChannel}
                     onChange={(e) => setNotificationChannel(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-indigo-500 text-white"
+                    className="w-full px-3 py-2.5 text-xs bg-black border border-[#262626] rounded-xl focus:outline-none focus:border-white text-white"
                   >
                     <option value="discord">Discord Webhook / Channel</option>
                     <option value="slack">Slack Incoming Webhook</option>
@@ -585,7 +580,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                  <label className="block text-xs font-bold text-neutral-300 mb-1">
                     Channel Identifier / Webhook URL
                   </label>
                   <input
@@ -593,7 +588,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     value={notificationWebhook}
                     onChange={(e) => setNotificationWebhook(e.target.value)}
                     placeholder="e.g. discord_channel_id or webhook URL"
-                    className="w-full px-3 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-indigo-500 text-white font-mono"
+                    className="w-full px-3 py-2.5 text-xs bg-black border border-[#262626] rounded-xl focus:outline-none focus:border-white text-white font-mono"
                   />
                 </div>
               </div>
@@ -601,13 +596,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               {/* Baseline Telemetry Checkbox */}
               <div
                 onClick={() => setSeedBaselineScenario(!seedBaselineScenario)}
-                className="p-4 bg-indigo-950/30 border border-indigo-500/40 rounded-2xl flex items-start gap-3.5 cursor-pointer hover:border-indigo-500 transition"
+                className="p-4 bg-black border border-white rounded-2xl flex items-start gap-3.5 cursor-pointer hover:bg-neutral-950 transition font-mono"
               >
                 <div
                   className={`w-5 h-5 rounded-md flex items-center justify-center text-xs mt-0.5 transition ${
                     seedBaselineScenario
-                      ? 'bg-indigo-600 text-white'
-                      : 'border border-slate-700 bg-slate-900'
+                      ? 'bg-white text-black font-bold'
+                      : 'border border-neutral-700 bg-black'
                   }`}
                 >
                   {seedBaselineScenario ? '✓' : ''}
@@ -615,21 +610,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <div>
                   <div className="text-xs font-bold text-white flex items-center gap-2">
                     <span>Initialize Workspace with Live Mirrored Sandbox Telemetry</span>
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-mono">
+                    <span className="text-[10px] bg-white text-black px-2 py-0.5 rounded-full font-bold">
                       RECOMMENDED
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                    Automatically seeds 27 multi-stage findings, maps your DMZ and crown jewel targets into the Cytoscape graph, and generates your first correlated attack path so you can immediately plan and verify in the lab.
+                  <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">
+                    Automatically seeds 27 multi-stage findings, maps your DMZ and crown jewel targets into the ReactFlow graph, and generates your first correlated attack path so you can immediately plan and verify in the lab.
                   </p>
                 </div>
               </div>
 
-              <div className="flex justify-between pt-4 border-t border-slate-800">
+              <div className="flex justify-between pt-4 border-t border-[#262626]">
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition cursor-pointer"
+                  className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition cursor-pointer border border-[#262626]"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Back</span>
@@ -638,7 +633,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <button
                   type="button"
                   onClick={handleSubmitOnboarding}
-                  className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition cursor-pointer"
+                  className="px-6 py-2.5 bg-white hover:bg-neutral-200 text-black font-bold text-xs rounded-xl flex items-center gap-2 transition cursor-pointer shadow-lg"
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Finalize & Launch Workspace</span>
@@ -651,4 +646,3 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     </div>
   );
 };
-

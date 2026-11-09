@@ -5,35 +5,42 @@
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #0B0F14;
-    color: #F1F5F9;
+    background-color: #000000;
+    color: #FFFFFF;
+    selection-background-color: #FFFFFF;
+    selection-color: #000000;
   }
   code, pre, .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
 }
 
-/* Custom dark scrollbar */
+::selection {
+  background: #FFFFFF;
+  color: #000000;
+}
+
+/* Custom pure monochrome dark scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0B0F14;
+  background: #000000;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1F2A37;
-  border-radius: 3px;
+  background: #262626;
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #525252;
 }
 
 /* Scroll reveal motion */
 .reveal-block {
   opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(16px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 
