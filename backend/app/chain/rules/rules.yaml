@@ -1,0 +1,48 @@
+rules:
+  - id: R-GIT-SSRF-REDIS
+    title: Source leak -> SSRF -> unauthenticated Redis -> RCE/Data Theft
+    mitre: ["T1592", "T1190", "T1210", "T1059"]
+    steps:
+      - order: 1
+        match:
+          rule_id_any: ["git-config-exposure", "git-head-exposure", "git-exposure", "exposed-git"]
+          tags_any: ["git", "source", "info_disclosure"]
+        requires: ["attacker_external"]
+        provides: ["internal_url_disclosure", "source_repo_access"]
+        narrative: "Exposed .git/config on public web tier reveals internal architecture and repo URLs (e.g. git.lab and internal endpoints)."
+
+      - order: 2
+        match:
+          rule_id_any: ["ssrf-fetch", "ssrf-canary", "ssrf-probe"]
+          tags_any: ["ssrf", "pivot"]
+        requires: ["internal_url_disclosure"]
+        provides: ["net_pivot_internal"]
+        narrative: "SSRF vulnerability allows an external attacker to pivot through the DMZ web server into the internal network."
+
+      - order: 3
+        match:
+          rule_id_any: ["redis-unauth", "redis-unauth-access", "redis-no-auth"]
+          tags_any: ["redis", "unauth", "database"]
+        requires: ["net_pivot_internal"]
+        provides: ["data_exfil", "code_exec_possible"]
+        narrative: "Internal Redis instance runs without authentication; reachable via SSRF pivot, permitting arbitrary command execution and cache dumping."
+
+  - id: R-CREDS-INTERNAL-PIVOT
+    title: Leaked repository credentials -> Internal service lateral access
+    mitre: ["T1552", "T1078", "T1021"]
+    steps:
+      - order: 1
+        match:
+          rule_id_any: ["gitleaks-secret", "generic-api-key", "leaked-secret"]
+          tags_any: ["secret", "credential"]
+        requires: ["attacker_external"]
+        provides: ["credential_disclosure"]
+        narrative: "Hardcoded internal service credentials discovered in leaked configuration files."
+
+      - order: 2
+        match:
+          rule_id_any: ["internal-admin-access", "internal-api"]
+          tags_any: ["admin", "api"]
+        requires: ["credential_disclosure"]
+        provides: ["data_read", "data_exfil"]
+        narrative: "Credentials grant unauthorized access to internal administration datastores and APIs."

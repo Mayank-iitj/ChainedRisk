@@ -1,0 +1,36 @@
+# Intentionally vulnerable, ISOLATED lab. Never expose these services outside the host.
+name: chainedrisk-lab
+networks:
+  chained_lab:
+    name: chained_lab
+    internal: true            # no gateway, no internet
+    ipam:
+      config:
+        - subnet: 10.77.0.0/24
+services:
+  app-lab:                    # Flask app: exposes /.git/config and /fetch?u= (SSRF, http/https only)
+    build: ./app-lab
+    container_name: app-lab
+    networks: { chained_lab: { ipv4_address: 10.77.0.10 } }
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    pids_limit: 128
+    tmpfs: [/tmp]
+  git-lab:                    # decoy internal git host referenced by leaked config
+    image: nginx:1.27-alpine
+    container_name: git-lab
+    networks: { chained_lab: { ipv4_address: 10.77.0.11 } }
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID, NET_BIND_SERVICE]
+    mem_limit: 64m
+  redis-lab:                  # unauthenticated Redis with SYNTHETIC data only
+    image: redis:7-alpine
+    container_name: redis-lab
+    command: ["redis-server", "--protected-mode", "no", "--save", "", "--appendonly", "no"]
+    networks: { chained_lab: { ipv4_address: 10.77.0.12 } }
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    pids_limit: 64

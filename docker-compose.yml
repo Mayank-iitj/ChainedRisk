@@ -1,0 +1,41 @@
+networks:
+  chained_app:
+    name: chained_app
+    driver: bridge
+  chained_lab:
+    external: true
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: chainedrisk-api
+    ports:
+      - "8000:8000"
+    environment:
+      - CR_ENV=dev
+      - CR_SECRET_KEY=chainedrisk-secret-32-chars-long!
+      - CR_APPROVAL_HMAC_KEY=chainedrisk-hmac-32-chars-key-very-secure!
+      - CR_DB_URL=sqlite:////data/chainedrisk.db
+      - CR_LLM_ENABLED=true
+      - CR_LAB_NETWORK=chained_lab
+      - CR_LAB_CIDR=10.77.0.0/24
+    volumes:
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - chained_app
+      - chained_lab
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: chainedrisk-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    networks:
+      - chained_app
