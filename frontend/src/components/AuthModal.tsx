@@ -37,46 +37,55 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
   useEffect(() => {
     if (!isOpen || !clientId) return;
 
-    // Load Google Identity Services script if not already present
-    const existingScript = document.getElementById('google-gsi-script');
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.id = 'google-gsi-script';
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = () => initializeGoogleSignIn();
-      document.body.appendChild(script);
+    const init = () => {
+      if (window.google?.accounts?.id && clientId) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+
+          if (googleBtnRef.current) {
+            googleBtnRef.current.innerHTML = '';
+            window.google.accounts.id.renderButton(googleBtnRef.current, {
+              theme: 'outline',
+              size: 'large',
+              text: mode === 'signin' ? 'signin_with' : 'signup_with',
+              shape: 'rectangular',
+              width: 320,
+            });
+          }
+        } catch (err) {
+          console.error('Error initializing Google Identity:', err);
+        }
+      }
+    };
+
+    if (window.google?.accounts?.id) {
+      init();
     } else {
-      initializeGoogleSignIn();
+      const existingScript = document.getElementById('google-gsi-script');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.id = 'google-gsi-script';
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => init();
+        document.body.appendChild(script);
+      } else {
+        const poll = setInterval(() => {
+          if (window.google?.accounts?.id) {
+            clearInterval(poll);
+            init();
+          }
+        }, 100);
+        return () => clearInterval(poll);
+      }
     }
   }, [isOpen, clientId, mode]);
-
-  const initializeGoogleSignIn = () => {
-    if (!window.google || !clientId) return;
-
-    try {
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: handleGoogleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-
-      if (googleBtnRef.current) {
-        googleBtnRef.current.innerHTML = '';
-        window.google.accounts.id.renderButton(googleBtnRef.current, {
-          theme: 'outline',
-          size: 'large',
-          text: mode === 'signin' ? 'signin_with' : 'signup_with',
-          shape: 'rectangular',
-          width: 320,
-        });
-      }
-    } catch (err) {
-      console.error('Error initializing Google Identity:', err);
-    }
-  };
 
   const handleGoogleCredentialResponse = async (response: any) => {
     if (!response || !response.credential) {

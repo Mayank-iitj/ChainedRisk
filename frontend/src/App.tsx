@@ -40,10 +40,7 @@ export const App: React.FC = () => {
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  const [viewMode, setViewMode] = useState<'landing' | 'app'>(() => {
-    const token = localStorage.getItem('cr_auth_token');
-    return token && window.location.hash === '#app' ? 'app' : 'landing';
-  });
+  const [viewMode, setViewMode] = useState<'landing' | 'app'>('landing');
   const [currentTab, setCurrentTab] = useState('overview');
   const [projectId, setProjectId] = useState('');
   const [stats, setStats] = useState<ProjectStats | null>(null);
@@ -69,21 +66,24 @@ export const App: React.FC = () => {
           if (user.active_project_id) {
             setProjectId(user.active_project_id);
           }
-          if (!user.onboarding_completed && viewMode === 'app') {
-            setShowOnboarding(true);
+          if (window.location.hash === '#app') {
+            setViewMode('app');
+            if (!user.onboarding_completed) {
+              setShowOnboarding(true);
+            }
           }
         } else {
           setCurrentUser(null);
-          if (viewMode === 'app') {
-            setViewMode('landing');
+          setViewMode('landing');
+          if (window.location.hash === '#app') {
             window.location.hash = '';
           }
         }
       } catch (err) {
         // Guest or expired session
         setCurrentUser(null);
-        if (viewMode === 'app') {
-          setViewMode('landing');
+        setViewMode('landing');
+        if (window.location.hash === '#app') {
           window.location.hash = '';
         }
       }
