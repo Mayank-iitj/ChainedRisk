@@ -32,7 +32,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientId, setClientId] = useState<string>(
-    (window as any).__RUNTIME_CONFIG__?.GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID
+    (import.meta.env.VITE_GOOGLE_CLIENT_ID as string) ||
+    (window as any).__RUNTIME_CONFIG__?.GOOGLE_CLIENT_ID ||
+    DEFAULT_GOOGLE_CLIENT_ID
   );
   const [customApiUrl, setCustomApiUrl] = useState<string>(getApiOrigin());
   const [showApiConfig, setShowApiConfig] = useState<boolean>(false);

@@ -1,16 +1,16 @@
 services:
   # =============================================================
-  # ChainedRisk Unified Service
-  # FastAPI backend + React SPA served from a single container.
-  # Uvicorn handles both /api/* routes and static frontend files.
-  # No Nginx, no separate services, no cross-service proxying.
+  # ChainedRisk Backend API
+  # FastAPI backend deployed as a Python web service on Render.
+  # Frontend is deployed separately on Vercel.
   # =============================================================
   - type: web
-    name: chainedrisk
-    runtime: docker
-    dockerfilePath: Dockerfile
+    name: chainedrisk-api
+    runtime: python
     plan: free
     region: oregon
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /
     autoDeploy: true
     disk:
@@ -29,4 +29,6 @@ services:
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: FRONTEND_URL
         sync: false

@@ -87,9 +87,19 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware (allows separate frontend and backend deployments on Render or localhost)
+# CORS middleware — supports Vercel deployments, custom domains, and local dev
+_frontend_url = os.environ.get("FRONTEND_URL", "").strip().rstrip("/")
+_cors_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+]
+if _frontend_url:
+    _cors_origins.append(_frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=_cors_origins,
     allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
@@ -116,56 +126,12 @@ app.include_router(reports.router, prefix="/api/v1")
 app.include_router(integrations.router, prefix="/api/v1")
 app.include_router(ws.router)
 
-# Mount static frontend build if dist directory exists
-frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
-assets_dist = frontend_dist / "assets"
-if frontend_dist.exists():
-    from fastapi.responses import FileResponse, JSONResponse
-    from fastapi import HTTPException
-
-    assets_dist.mkdir(parents=True, exist_ok=True)
-
-    # Generate runtime-config.js for client-side service discovery
-    runtime_config_path = frontend_dist / "runtime-config.js"
-    google_cid = os.environ.get("GOOGLE_CLIENT_ID", "506395453665-diof91lvuhuhp4kgji3umibrjunuthq8.apps.googleusercontent.com")
-    runtime_config_path.write_text(
-        f'window.__RUNTIME_CONFIG__ = {{\n'
-        f'  BACKEND_URL: "",\n'
-        f'  GOOGLE_CLIENT_ID: "{google_cid}"\n'
-        f'}};\n'
-    )
-
-    @app.get("/")
-    def serve_frontend_root():
-        index_file = frontend_dist / "index.html"
-        if index_file.exists():
-            return FileResponse(index_file, headers={"Cross-Origin-Opener-Policy": "same-origin-allow-popups"})
-        return {"service": "ChainedRisk API", "status": "operational"}
-
-    app.mount("/assets", StaticFiles(directory=str(assets_dist)), name="assets")
-    app.mount("/app", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
-
-    @app.get("/{full_path:path}")
-    def serve_spa_fallback(full_path: str):
-        if full_path.startswith("api") or full_path in ("docs", "redoc", "openapi.json", "ws"):
-            raise HTTPException(status_code=404, detail="Not Found")
-        file_path = frontend_dist / full_path
-        if file_path.exists() and file_path.is_file():
-            headers = {"Cross-Origin-Opener-Policy": "same-origin-allow-popups"}
-            if full_path == "runtime-config.js":
-                headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
-            return FileResponse(file_path, headers=headers)
-        index_file = frontend_dist / "index.html"
-        if index_file.exists():
-            return FileResponse(index_file, headers={"Cross-Origin-Opener-Policy": "same-origin-allow-popups"})
-        return {"service": "ChainedRisk API", "status": "operational"}
-else:
-    @app.get("/")
-    def root():
-        return {
-            "service": "ChainedRisk API",
-            "version": "1.0.0",
-            "docs_url": "/docs",
-            "scope": "lab-only",
-            "status": "operational"
-        }
+@app.get("/")
+def root():
+    return {
+        "service": "ChainedRisk API",
+        "version": "1.0.0",
+        "docs_url": "/docs",
+        "scope": "lab-only",
+        "status": "operational"
+    }
