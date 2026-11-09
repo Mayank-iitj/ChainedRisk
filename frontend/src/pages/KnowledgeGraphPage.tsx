@@ -14,7 +14,7 @@ import {
   Sparkles,
   GitMerge
 } from 'lucide-react';
-import { CytoscapeGraph } from '../components/CytoscapeGraph';
+import { ReactFlowGraph } from '../components/ReactFlowGraph';
 import { fetchGraph } from '../api';
 
 interface KnowledgeGraphPageProps {
@@ -137,9 +137,9 @@ export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({
 
       {/* Main Canvas + Inspector Split View */}
       <div className="flex-1 min-h-0 bg-[#0B0F14] border border-[#1F2A37] rounded-xl overflow-hidden relative flex">
-        {/* Cytoscape Canvas */}
+        {/* ReactFlow Canvas */}
         <div className="flex-1 h-full relative">
-          <CytoscapeGraph elements={displayElements} onNodeSelect={(node) => setSelectedNode(node)} />
+          <ReactFlowGraph elements={displayElements} onNodeSelect={(node) => setSelectedNode(node)} />
 
           {/* Floating Canvas Legend */}
           <div className="absolute bottom-4 left-4 z-10 bg-[#121821]/95 border border-[#1F2A37] rounded-lg p-3 shadow-xl text-[11px] font-mono space-y-1.5 pointer-events-auto backdrop-blur-md">

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { SafetyBar } from './components/SafetyBar';
 import { Sidebar } from './components/Sidebar';
 import { ApprovalModal } from './components/ApprovalModal';
-import { CytoscapeGraph } from './components/CytoscapeGraph';
 import { Overview } from './pages/Overview';
 import { Ingest } from './pages/Ingest';
 import { Chains } from './pages/Chains';
