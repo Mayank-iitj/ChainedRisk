@@ -1,93 +1,115 @@
 # 🚀 Deploying ChainedRisk to Render
 
-This comprehensive guide details how to deploy **ChainedRisk** to [Render](https://render.com) as a production-grade, self-hosted multi-stage attack correlation system.
+This comprehensive guide details how to deploy **both the Backend API and Frontend UI** of **ChainedRisk** to [Render](https://render.com) using the included `render.yaml` Blueprint or manual setup.
 
 ---
 
-## ⚡ Architecture on Render
+## ⚡ Deployment Architectures Supported
 
-ChainedRisk is packaged as a **Unified Cloud Service**:
-- **Frontend SPA**: React 18 + Vite compiled into `frontend/dist` with pure monochrome styling, dynamic ReactFlow graph visualization, and interactive intake forms.
-- **Backend API & Engine**: FastAPI + SQLAlchemy + Uvicorn hosting the API (`/api/v1/*`), WebSockets (`/ws`), and serving the frontend from `/` with client-side SPA routing.
-- **Persistent Disk**: 1 GB mounted disk at `/app/data` to ensure all projects, custom telemetry, attack chains, and audit ledgers persist permanently across restarts.
+Render supports two deployment patterns for ChainedRisk:
+
+### 1. Two-Tier Deployment (Both Services on Render)
+* **Backend API (`chainedrisk-api`)**: Python Web Service running FastAPI, the Correlator Engine, and WebSockets with a 1 GB persistent disk for the SQLite database.
+* **Frontend Static Site (`chainedrisk-frontend`)**: Fast global CDN static site serving the React 18 SPA with client-side routing, connected directly to `chainedrisk-api` via `VITE_API_URL`.
+
+### 2. Unified All-in-One Deployment (`chainedrisk-unified`)
+* A single Docker Web Service where FastAPI serves both the API endpoints (`/api/v1/*`), WebSockets (`/ws`), and the compiled React SPA directly from `/` with client-side SPA routing.
 
 ---
 
-## Option A: 1-Click Blueprint Deployment (Recommended)
+## 🚀 1-Click Render Blueprint Setup
 
-1. **Fork or Push** this repository to your GitHub account:
+1. Push this repository to your GitHub account:
    ```bash
-   git remote add origin https://github.com/<your-username>/ChainedRisk.git
-   git push -u origin main
+   git push origin main
    ```
 
-2. Log in to your [Render Dashboard](https://dashboard.render.com).
-3. Click **New +** in the top right corner and select **Blueprint**.
-4. Connect your GitHub repository: `ChainedRisk`.
-5. Render will automatically parse `render.yaml` and configure:
-   - **Service Name**: `chainedrisk`
-   - **Runtime**: Docker (Multi-Stage Production Image)
-   - **Persistent Disk**: `chainedrisk-storage` (1 GB) mounted at `/app/data`
-   - **Health Check**: `/`
-6. Fill in the required environment variables:
-   - `GOOGLE_CLIENT_ID`: Your Google Cloud OAuth Client ID (e.g. `your-client-id.apps.googleusercontent.com`)
-   - `GOOGLE_CLIENT_SECRET`: Your Google Cloud OAuth Client Secret (e.g. `GOCSPX-your-secret-key`)
-7. Click **Apply**. Render will automatically build the frontend, package the Python service, and launch the application!
+2. Open the [Render Dashboard](https://dashboard.render.com).
+3. Click **New +** -> **Blueprint**.
+4. Select the `ChainedRisk` repository.
+5. Render will automatically parse `render.yaml` and offer to provision:
+   * **`chainedrisk-api`** (Backend Web Service + Persistent Disk)
+   * **`chainedrisk-frontend`** (Static Site with SPA routing & auto-linked API origin)
+   * **`chainedrisk-unified`** (Optional all-in-one container)
+6. Provide your Google OAuth credentials in the environment prompt:
+   * `GOOGLE_CLIENT_ID`: Your Google OAuth Client ID (from Google Cloud Console)
+   * `GOOGLE_CLIENT_SECRET`: Your Google OAuth Client Secret
+7. Click **Apply**. Render will deploy both services automatically!
 
 ---
 
-## Option B: Manual Web Service Setup
+## 🛠️ Manual Deployment Steps (If Not Using Blueprints)
 
-If you prefer configuring the Web Service manually:
-
-1. Click **New +** -> **Web Service**.
+### Part 1: Deploy the Backend API (`chainedrisk-api`)
+1. In Render, click **New +** -> **Web Service**.
 2. Select your repository `ChainedRisk`.
-3. Configure the service settings:
-   - **Name**: `chainedrisk`
-   - **Region**: Oregon (US West) or closest to your users
-   - **Branch**: `main`
-   - **Runtime**: `Docker`
-   - **Dockerfile Path**: `Dockerfile`
-   - **Instance Type**: `Free` or `Starter`
+3. Configure the backend:
+   * **Name**: `chainedrisk-api`
+   * **Runtime**: `Python`
+   * **Region**: `Oregon` (or closest to your users)
+   * **Build Command**: `pip install --upgrade pip && pip install -r requirements.txt`
+   * **Start Command**: `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`
 4. Add Persistent Disk (under **Disks** section):
-   - **Name**: `chainedrisk-storage`
-   - **Mount Path**: `/app/data`
-   - **Size**: `1 GB`
-5. Configure Environment Variables (under **Environment** tab):
+   * **Name**: `chainedrisk-api-data`
+   * **Mount Path**: `/opt/render/project/src/data`
+   * **Size**: `1 GB`
+5. Configure Environment Variables:
    | Key | Value | Description |
    |---|---|---|
-   | `CR_ENV` | `production` | Production environment flag |
-   | `CR_SECRET_KEY` | *(Click Generate)* | Session signature key |
-   | `CR_APPROVAL_HMAC_KEY` | *(Click Generate)* | Cryptographic verification HMAC key |
-   | `CR_DB_URL` | `sqlite:////app/data/chainedrisk.db` | Persistent SQLite database path |
-   | `GOOGLE_CLIENT_ID` | `your-google-client-id` | Google OAuth Client ID |
-   | `GOOGLE_CLIENT_SECRET` | `your-google-client-secret` | Google OAuth Client Secret |
-6. Click **Create Web Service**.
+   | `CR_ENV` | `production` | Production mode |
+   | `CR_SECRET_KEY` | *(Click Generate)* | Session encryption key |
+   | `CR_APPROVAL_HMAC_KEY` | *(Click Generate)* | HMAC token verification key |
+   | `CR_DB_URL` | `sqlite:////opt/render/project/src/data/chainedrisk.db` | Persistent database path |
+   | `GOOGLE_CLIENT_ID` | `<your-google-client-id>` | Google OAuth Client ID |
+   | `GOOGLE_CLIENT_SECRET` | `<your-google-client-secret>` | Google OAuth Client Secret |
+6. Click **Create Web Service**. Note the assigned URL (e.g. `https://chainedrisk-api.onrender.com`).
 
 ---
 
-## 🔑 Configure Google OAuth for your Render URL
+### Part 2: Deploy the Frontend UI (`chainedrisk-frontend`)
+1. In Render, click **New +** -> **Static Site**.
+2. Select your repository `ChainedRisk`.
+3. Configure the static site:
+   * **Name**: `chainedrisk-frontend`
+   * **Root Directory**: `frontend`
+   * **Build Command**: `npm install && npm run build`
+   * **Publish Directory**: `dist`
+4. Configure Rewrites/Redirects (under **Redirects/Rewrites** section):
+   * **Source**: `/*`
+   * **Destination**: `/index.html`
+   * **Action**: `Rewrite` (required for React Router/SPA hash navigation)
+5. Configure Environment Variables:
+   | Key | Value | Description |
+   |---|---|---|
+   | `VITE_API_URL` | `https://chainedrisk-api.onrender.com` | URL of the backend API service |
+6. Click **Create Static Site**.
 
-Once Render provisions your service, you will receive a public HTTPS URL (e.g. `https://chainedrisk.onrender.com`).
+---
 
-1. Open the [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
-2. Click on your OAuth 2.0 Client ID.
+## 🔑 Configure Google Cloud OAuth for your Render Domains
+
+After deploying both services, configure Google OAuth to authorize both origins:
+
+1. Open the [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials).
+2. Click on your OAuth 2.0 Web Client ID.
 3. Under **Authorized JavaScript origins**, add:
    ```text
-   https://chainedrisk.onrender.com
+   https://chainedrisk-frontend.onrender.com
+   https://chainedrisk-api.onrender.com
    ```
 4. Under **Authorized redirect URIs**, add:
    ```text
-   https://chainedrisk.onrender.com
-   https://chainedrisk.onrender.com/api/v1/auth/google/callback
+   https://chainedrisk-frontend.onrender.com
+   https://chainedrisk-api.onrender.com
+   https://chainedrisk-api.onrender.com/api/v1/auth/google/callback
    ```
 5. Click **Save**.
 
 ---
 
-## 🎯 Verification Checklist
+## ✅ Deployment Verification Checklist
 
-- [x] Navigate to `https://chainedrisk.onrender.com`
-- [x] Sign in securely using your Google Workspace / Gmail account
-- [x] Complete the 4-step onboarding intake by feeding your actual org, custom ingress assets, and internal crown jewels
-- [x] Inspect your personalized Attack Graph and verified telemetry in the dashboard!
+- [x] Access `https://chainedrisk-frontend.onrender.com`
+- [x] Sign in using Google OAuth
+- [x] Complete the 4-step interactive onboarding intake (Ingress perimeter & Crown jewels)
+- [x] View your personalized Attack Graph and verified vulnerability findings

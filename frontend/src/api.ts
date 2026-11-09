@@ -12,7 +12,11 @@ import {
   PolicyRule
 } from './types';
 
-const BASE_URL = '/api/v1';
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim();
+export const API_ORIGIN = rawApiUrl
+  ? (rawApiUrl.startsWith('http') ? rawApiUrl.replace(/\/+$/, '') : `https://${rawApiUrl.replace(/\/+$/, '')}`)
+  : '';
+const BASE_URL = `${API_ORIGIN}/api/v1`;
 
 export function getAuthToken(): string | null {
   return localStorage.getItem('cr_auth_token');

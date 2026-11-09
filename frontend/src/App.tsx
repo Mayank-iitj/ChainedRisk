@@ -30,7 +30,8 @@ import {
   correlateProject,
   fetchCurrentUser,
   logoutUser,
-  getAuthToken
+  getAuthToken,
+  API_ORIGIN
 } from './api';
 import { ProjectStats, AttackChain, ApprovalCard, UserProfile } from './types';
 
@@ -169,8 +170,15 @@ export const App: React.FC = () => {
 
   const setupWebSocket = () => {
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      let wsUrl = '';
+      if (API_ORIGIN) {
+        const urlObj = new URL(API_ORIGIN);
+        const protocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${urlObj.host}/ws`;
+      } else {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${window.location.host}/ws`;
+      }
       const socket = new WebSocket(wsUrl);
 
       socket.onmessage = (event) => {

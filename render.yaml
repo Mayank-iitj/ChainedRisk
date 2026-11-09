@@ -1,6 +1,61 @@
 services:
+  # -------------------------------------------------------------
+  # 1. BACKEND API SERVICE (FastAPI, Correlator Engine & WebSockets)
+  # -------------------------------------------------------------
   - type: web
-    name: chainedrisk
+    name: chainedrisk-api
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /
+    autoDeploy: true
+    disk:
+      name: chainedrisk-api-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
+    envVars:
+      - key: CR_ENV
+        value: production
+      - key: CR_SECRET_KEY
+        generateValue: true
+      - key: CR_APPROVAL_HMAC_KEY
+        generateValue: true
+      - key: CR_DB_URL
+        value: sqlite:////opt/render/project/src/data/chainedrisk.db
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+  # -------------------------------------------------------------
+  # 2. FRONTEND STATIC SITE (React 18 + Vite + SPA Routing)
+  # -------------------------------------------------------------
+  - type: web
+    name: chainedrisk-frontend
+    runtime: static
+    plan: free
+    region: oregon
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: chainedrisk-api
+          property: host
+
+  # -------------------------------------------------------------
+  # 3. UNIFIED CONTAINER (Alternative All-in-One Deployment)
+  # -------------------------------------------------------------
+  - type: web
+    name: chainedrisk-unified
     runtime: docker
     dockerfilePath: Dockerfile
     plan: free
@@ -8,7 +63,7 @@ services:
     healthCheckPath: /
     autoDeploy: true
     disk:
-      name: chainedrisk-storage
+      name: chainedrisk-unified-storage
       mountPath: /app/data
       sizeGB: 1
     envVars:
@@ -24,4 +79,3 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-
