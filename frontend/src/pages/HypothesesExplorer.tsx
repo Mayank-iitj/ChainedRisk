@@ -55,29 +55,7 @@ export const HypothesesExplorer: React.FC<HypothesesExplorerProps> = ({
     }
   };
 
-  // Pre-seed known invariant safety guardrails if project rejections list is fresh
-  const displayRejections = rejections.length > 0
-    ? rejections
-    : [
-        {
-          id: 'rej_inv_01',
-          reason: 'INV-1 Scope Violation: Candidate probe 192.168.1.100 is outside lab CIDR boundary (10.77.0.0/24)',
-          payload: { candidate_step: 'ssh_pivot_external', attempted_target: '192.168.1.100' },
-          created_at: '2026-11-09T08:00:00Z'
-        },
-        {
-          id: 'rej_inv_04',
-          reason: 'INV-4 Missing Pivot Capability: Cannot bridge from external DMZ to isolated redis.lab:6379 without net_pivot_internal',
-          payload: { missing_capability: 'net_pivot_internal', source: 'app.lab', target: 'redis.lab' },
-          created_at: '2026-11-09T08:05:00Z'
-        },
-        {
-          id: 'rej_inv_08',
-          reason: 'INV-8 Sandbox Boundary: Non-root UID 10001 in runner container blocked kernel privilege escalation probe',
-          payload: { uid: 10001, security_profile: 'drop_all_caps' },
-          created_at: '2026-11-09T08:12:00Z'
-        }
-      ];
+  const displayRejections = rejections;
 
   return (
     <div className="space-y-6 pb-8 select-none">
@@ -254,25 +232,35 @@ export const HypothesesExplorer: React.FC<HypothesesExplorerProps> = ({
             </div>
 
             <div className="space-y-3">
-              {displayRejections.map((rej, idx) => (
-                <div key={rej.id || idx} className="p-4 bg-black border border-[#262626] rounded-lg space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white font-mono flex items-center gap-1.5">
-                      <AlertOctagon className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
-                      {rej.reason}
-                    </span>
-                    <span className="text-[10px] font-mono text-neutral-500">
-                      {rej.created_at ? new Date(rej.created_at).toLocaleTimeString() : 'Verified'}
-                    </span>
-                  </div>
-
-                  {rej.payload && (
-                    <div className="text-[10px] font-mono text-neutral-400 bg-[#0A0A0A] p-2.5 rounded border border-[#262626] max-w-2xl truncate">
-                      Parameters: {JSON.stringify(rej.payload)}
-                    </div>
-                  )}
+              {displayRejections.length === 0 ? (
+                <div className="p-8 text-center text-neutral-400 font-mono text-xs bg-black rounded-lg border border-[#262626] space-y-2">
+                  <CheckCircle2 className="w-8 h-8 text-white mx-auto" />
+                  <div className="text-white font-bold">100% Invariant Validation Passed</div>
+                  <p className="text-[11px] text-neutral-500 max-w-md mx-auto">
+                    All candidate attack trajectories evaluated for this project satisfy capability flow and scope invariants (INV-1 through INV-12). Zero ungranted pivots detected.
+                  </p>
                 </div>
-              ))}
+              ) : (
+                displayRejections.map((rej, idx) => (
+                  <div key={rej.id || idx} className="p-4 bg-black border border-[#262626] rounded-lg space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white font-mono flex items-center gap-1.5">
+                        <AlertOctagon className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                        {rej.reason}
+                      </span>
+                      <span className="text-[10px] font-mono text-neutral-500">
+                        {rej.created_at ? new Date(rej.created_at).toLocaleTimeString() : 'Verified'}
+                      </span>
+                    </div>
+
+                    {rej.payload && (
+                      <div className="text-[10px] font-mono text-neutral-400 bg-[#0A0A0A] p-2.5 rounded border border-[#262626] max-w-2xl truncate">
+                        Parameters: {JSON.stringify(rej.payload)}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}

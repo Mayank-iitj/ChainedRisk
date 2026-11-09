@@ -266,15 +266,20 @@ def complete_onboarding(
             "datastores": []
         }]
 
+    created_ing_assets = []
     for idx, ing in enumerate(ingress_nodes):
         a_id = f"ast_ing_{idx+1}_{uuid.uuid4().hex[:4]}"
+        a_name = getattr(ing, 'name', 'gateway.internal') if hasattr(ing, 'name') else ing.get('name', 'gateway.internal')
+        a_ip = getattr(ing, 'ip', '10.77.0.10') if hasattr(ing, 'ip') else ing.get('ip', '10.77.0.10')
+        a_type = getattr(ing, 'type', 'Host') if hasattr(ing, 'type') else ing.get('type', 'Host')
+        services = getattr(ing, 'services', []) if hasattr(ing, 'services') else ing.get('services', [])
         props = {
             "id": a_id,
-            "type": getattr(ing, 'type', 'Host') if hasattr(ing, 'type') else ing.get('type', 'Host'),
-            "name": getattr(ing, 'name', 'app.lab') if hasattr(ing, 'name') else ing.get('name', 'app.lab'),
-            "ip": getattr(ing, 'ip', '10.77.0.10') if hasattr(ing, 'ip') else ing.get('ip', '10.77.0.10'),
+            "type": a_type,
+            "name": a_name,
+            "ip": a_ip,
             "zone": "dmz",
-            "services": [{"port": 8080, "proto": "tcp", "product": s} for s in (getattr(ing, 'services', []) if hasattr(ing, 'services') else ing.get('services', []))]
+            "services": [{"port": 8080 if i == 0 else 443, "proto": "tcp", "product": s} for i, s in enumerate(services or ["envoy", "nginx"])]
         }
         ast = Asset(
             id=a_id,
@@ -285,6 +290,7 @@ def complete_onboarding(
             zone="dmz"
         )
         db.add(ast)
+        created_ing_assets.append(ast)
 
     # Seed Crown Jewels Assets
     jewel_nodes = req.crown_jewels
@@ -309,15 +315,22 @@ def complete_onboarding(
             }
         ]
 
+    created_jwl_assets = []
     for idx, jwl in enumerate(jewel_nodes):
         a_id = f"ast_jwl_{idx+1}_{uuid.uuid4().hex[:4]}"
+        a_name = getattr(jwl, 'name', 'internal.db') if hasattr(jwl, 'name') else jwl.get('name', 'internal.db')
+        a_ip = getattr(jwl, 'ip', '10.77.0.12') if hasattr(jwl, 'ip') else jwl.get('ip', '10.77.0.12')
+        a_type = getattr(jwl, 'type', 'Host') if hasattr(jwl, 'type') else jwl.get('type', 'Host')
+        datastores = getattr(jwl, 'datastores', []) if hasattr(jwl, 'datastores') else jwl.get('datastores', [])
+        services = getattr(jwl, 'services', []) if hasattr(jwl, 'services') else jwl.get('services', [])
         props = {
             "id": a_id,
-            "type": getattr(jwl, 'type', 'Host') if hasattr(jwl, 'type') else jwl.get('type', 'Host'),
-            "name": getattr(jwl, 'name', 'internal.db') if hasattr(jwl, 'name') else jwl.get('name', 'internal.db'),
-            "ip": getattr(jwl, 'ip', '10.77.0.12') if hasattr(jwl, 'ip') else jwl.get('ip', '10.77.0.12'),
+            "type": a_type,
+            "name": a_name,
+            "ip": a_ip,
             "zone": "internal",
-            "datastores": [{"id": d, "kind": "database", "sensitivity": "high"} for d in (getattr(jwl, 'datastores', []) if hasattr(jwl, 'datastores') else jwl.get('datastores', []))]
+            "services": [{"port": 6379 if "redis" in a_name.lower() else 5432 if "postgres" in a_name.lower() or "db" in a_name.lower() else 80, "proto": "tcp", "product": s} for s in (services or ["service"])],
+            "datastores": [{"id": d, "kind": "cache" if "redis" in a_name.lower() else "database", "sensitivity": "crown_jewel"} for d in (datastores or [f"ds_{idx+1}"])]
         }
         ast = Asset(
             id=a_id,
@@ -328,30 +341,89 @@ def complete_onboarding(
             zone="internal"
         )
         db.add(ast)
+        created_jwl_assets.append(ast)
 
     db.commit()
 
-    # If requested, seed baseline findings and run correlation
+    # If requested, seed baseline findings tailored directly to the user's assets
     if req.seed_baseline_scenario:
         seed_demo_path = Path(__file__).resolve().parents[4] / "seed" / "demo_scenario.json"
         if seed_demo_path.exists():
-            with open(seed_demo_path, "rb") as f:
-                content = f.read()
-            process_ingest(
-                db=db,
-                project_id=project_id,
-                file_bytes=content,
-                source_tool="native",
-                filename="baseline_telemetry.json",
-                actor=user.username
-            )
+            with open(seed_demo_path, "r", encoding="utf-8") as f:
+                raw_data = json.load(f)
+
+            raw_findings = raw_data.get("findings", [])
+            primary_ing = created_ing_assets[0]
+            primary_jwl = created_jwl_assets[0] if created_jwl_assets else primary_ing
+            second_jwl = created_jwl_assets[1] if len(created_jwl_assets) > 1 else primary_jwl
+
+            for f_spec in raw_findings:
+                fid = f"fnd_{uuid.uuid4().hex[:8]}"
+                # Map asset ID
+                orig_asset = f_spec.get("asset_id", "")
+                if orig_asset == "ast_app":
+                    target_asset_id = primary_ing.id
+                    target_host = primary_ing.name
+                elif orig_asset == "ast_git":
+                    target_asset_id = second_jwl.id
+                    target_host = second_jwl.name
+                else:
+                    target_asset_id = primary_jwl.id
+                    target_host = primary_jwl.name
+
+                # Tailor evidence strings with user's hostnames
+                ev_str = json.dumps(f_spec.get("evidence", {}))
+                ev_str = ev_str.replace("app.lab", primary_ing.name)
+                ev_str = ev_str.replace("git.lab", second_jwl.name)
+                ev_str = ev_str.replace("redis.lab", primary_jwl.name)
+                tailored_ev = json.loads(ev_str)
+
+                # Generate clean dedup key
+                rule_id = f_spec.get("rule_id", "rule")
+                dedup_key = hashlib.sha256(f"{project_id}|{rule_id}|{target_asset_id}".encode('utf-8')).hexdigest()
+
+                new_finding = Finding(
+                    id=fid,
+                    project_id=project_id,
+                    asset_id=target_asset_id,
+                    title=f_spec.get("title", ""),
+                    stage=f_spec.get("stage", "vuln"),
+                    severity=f_spec.get("severity", "medium"),
+                    cvss=f_spec.get("cvss", 7.5),
+                    source_tool=f_spec.get("source_tool", "nuclei"),
+                    rule_id=rule_id,
+                    evidence_json=json.dumps(tailored_ev),
+                    provides_json=json.dumps(f_spec.get("provides", [])),
+                    requires_json=json.dumps(f_spec.get("requires", [])),
+                    cwe_json=json.dumps(f_spec.get("tags", [])),
+                    attack_json=json.dumps([]),
+                    dedup_key=dedup_key,
+                    confidence=f_spec.get("confidence", 0.95),
+                    first_seen=utcnow_str()
+                )
+                db.add(new_finding)
+            db.commit()
+
             # Run deterministic correlation on the newly generated project
-            chain_engine.correlate(
+            correlate_res = chain_engine.correlate(
                 project_id=project_id,
                 db=db,
                 use_llm=False,
                 actor=user.username
             )
+
+            # Auto-create verification plan and initial approval card for the top chain
+            if correlate_res:
+                try:
+                    from backend.app.verify.planner import create_verification_plan
+                    top_c = correlate_res[0]
+                    v_plan = create_verification_plan(top_c["id"], db)
+                    if v_plan and v_plan.get("steps"):
+                        from backend.app.approvals.service import approval_service
+                        step_to_gate = next((s for s in v_plan["steps"] if s.get("approval_required")), v_plan["steps"][0])
+                        approval_service.create_card_for_step(step_to_gate["id"], db, requested_by="system_onboarding")
+                except Exception as e:
+                    print(f"[ONBOARDING] Plan pre-seed notice: {e}")
 
     # Save user onboarding status and active project
     user.org_name = req.org_name

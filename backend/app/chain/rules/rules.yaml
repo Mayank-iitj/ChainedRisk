@@ -1,6 +1,6 @@
 rules:
   - id: R-GIT-SSRF-REDIS
-    title: Source leak -> SSRF -> unauthenticated Redis -> RCE/Data Theft
+    title: Exposed Git config -> SSRF gateway pivot -> Unauthenticated Redis -> Crown Jewel Cache Dump
     mitre: ["T1592", "T1190", "T1210", "T1059"]
     steps:
       - order: 1
@@ -13,7 +13,7 @@ rules:
 
       - order: 2
         match:
-          rule_id_any: ["ssrf-fetch", "ssrf-canary", "ssrf-probe"]
+          rule_id_any: ["ssrf-fetch-proxy", "ssrf-fetch", "ssrf-canary", "ssrf-probe"]
           tags_any: ["ssrf", "pivot"]
         requires: ["internal_url_disclosure"]
         provides: ["net_pivot_internal"]
@@ -21,28 +21,84 @@ rules:
 
       - order: 3
         match:
-          rule_id_any: ["redis-unauth", "redis-unauth-access", "redis-no-auth"]
+          rule_id_any: ["redis-unauth-access", "redis-unauth", "redis-no-auth"]
           tags_any: ["redis", "unauth", "database"]
         requires: ["net_pivot_internal"]
         provides: ["data_exfil", "code_exec_possible"]
         narrative: "Internal Redis instance runs without authentication; reachable via SSRF pivot, permitting arbitrary command execution and cache dumping."
 
   - id: R-CREDS-INTERNAL-PIVOT
-    title: Leaked repository credentials -> Internal service lateral access
+    title: Leaked repository credentials -> Internal service lateral access & SCM key extraction
     mitre: ["T1552", "T1078", "T1021"]
     steps:
       - order: 1
         match:
-          rule_id_any: ["gitleaks-secret", "generic-api-key", "leaked-secret"]
-          tags_any: ["secret", "credential"]
+          rule_id_any: ["git-config-exposure", "git-exposure"]
+          tags_any: ["git", "source"]
         requires: ["attacker_external"]
-        provides: ["credential_disclosure"]
-        narrative: "Hardcoded internal service credentials discovered in leaked configuration files."
+        provides: ["source_repo_access"]
+        narrative: "Source repository access gained via exposed version control metadata on public perimeter."
 
       - order: 2
         match:
-          rule_id_any: ["internal-admin-access", "internal-api"]
-          tags_any: ["admin", "api"]
+          rule_id_any: ["generic-jwt-secret", "gitleaks-secret", "generic-api-key", "leaked-secret"]
+          tags_any: ["secret", "credential", "gitleaks"]
+        requires: ["source_repo_access"]
+        provides: ["credential_disclosure", "auth_bypass"]
+        narrative: "Hardcoded production secrets and cryptographic signing keys discovered in committed code."
+
+      - order: 3
+        match:
+          rule_id_any: ["gitleaks-ssh-privkey", "internal-admin-access", "internal-api"]
+          tags_any: ["ssh_key", "admin", "api"]
+        requires: ["source_repo_access", "credential_disclosure"]
+        provides: ["ssh_lateral_movement", "data_exfil"]
+        narrative: "Extracted SSH private deploy keys permit lateral pivot into internal production clusters."
+
+  - id: R-ENV-CLOUD-TAKEOVER
+    title: Exposed environment configuration (.env) -> Cloud IAM credential exfiltration
+    mitre: ["T1552.001", "T1078.004", "T1530"]
+    steps:
+      - order: 1
+        match:
+          rule_id_any: ["env-file-disclosure", "env-exposure"]
+          tags_any: ["cloud_leak", "cwe-552"]
+        requires: ["attacker_external"]
+        provides: ["cloud_iam_keys", "credential_disclosure"]
+        narrative: "Publicly accessible .env configuration file discloses AWS IAM access keys and internal database URIs."
+
+      - order: 2
+        match:
+          rule_id_any: ["backup-dump-exposure", "internal-api"]
+          tags_any: ["backup_leak", "cwe-530"]
         requires: ["credential_disclosure"]
-        provides: ["data_read", "data_exfil"]
-        narrative: "Credentials grant unauthorized access to internal administration datastores and APIs."
+        provides: ["data_exfil"]
+        narrative: "Cloud storage keys allow direct unauthorized downloading of unencrypted production database backups."
+
+  - id: R-CORS-SESSION-THEFT
+    title: Permissive CORS with credentials -> Stored session theft -> Administrative control hijack
+    mitre: ["T1189", "T1539", "T1078"]
+    steps:
+      - order: 1
+        match:
+          rule_id_any: ["cors-misconfiguration", "cors-wildcard"]
+          tags_any: ["cors", "cwe-942"]
+        requires: ["attacker_external"]
+        provides: ["session_hijacking_vector"]
+        narrative: "Wildcard CORS policy echoing arbitrary origin with Access-Control-Allow-Credentials allows Cross-Origin data extraction."
+
+      - order: 2
+        match:
+          rule_id_any: ["insecure-session-cookie", "cookie-no-httponly"]
+          tags_any: ["cookies", "cwe-1004"]
+        requires: ["session_hijacking_vector"]
+        provides: ["session_theft_possible"]
+        narrative: "Session cookie without HttpOnly protections permits client-side script token harvesting."
+
+      - order: 3
+        match:
+          rule_id_any: ["admin-debug-route", "swagger-api-exposed"]
+          tags_any: ["admin", "api_catalog"]
+        requires: ["session_theft_possible"]
+        provides: ["internal_topology_leak"]
+        narrative: "Stolen administrative session provides full authenticated access to privileged cluster debug routes."

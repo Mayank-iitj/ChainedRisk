@@ -235,8 +235,16 @@ export const Chains: React.FC<ChainsProps> = ({
               Recommended Graph Min-Cut Fix
             </span>
             <div className="text-neutral-300 text-xs">
-              Block private RFC-1918 / localhost IP ranges in the <code className="bg-neutral-900 text-white px-1.5 py-0.5 rounded border border-[#333333]">/fetch?u=</code> proxy filter.
-              This single remediation breaks 100% of reachability paths to internal Redis instances.
+              {selectedChain.remediation && selectedChain.remediation.length > 0 ? (
+                <>
+                  Execute <strong>{selectedChain.remediation[0].action}</strong> on finding ID <code className="bg-neutral-900 text-white px-1.5 py-0.5 rounded border border-[#333333]">{selectedChain.remediation[0].finding_id}</code>.
+                  This bottleneck intervention cuts <strong>{selectedChain.remediation[0].risk_eliminated} points</strong> of cumulative risk and breaks <strong>{selectedChain.remediation[0].breaks_chains_count}</strong> active attack path(s) to crown jewels.
+                </>
+              ) : (
+                <>
+                  Implement strict ingress and egress boundary filters on intermediate pivot hops to sever the capability chain.
+                </>
+              )}
             </div>
           </div>
         </div>

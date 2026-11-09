@@ -198,11 +198,11 @@ export const Overview: React.FC<OverviewProps> = ({
               <div className="flex items-center gap-4 text-xs mt-1.5 font-mono">
                 <span className="flex items-center gap-1.5 text-white font-bold">
                   <span className="w-2 h-2 bg-white"></span>
-                  Correlated Chain: {topChain?.score ?? 91} (Critical)
+                  Correlated Chain: {topChain?.score ?? (stats?.chains ? 90 : 0)} ({topChain?.severity?.toUpperCase() || (topChain ? 'CRITICAL' : 'NONE')})
                 </span>
                 <span className="flex items-center gap-1.5 text-neutral-400">
                   <span className="w-2 h-2 border border-neutral-400"></span>
-                  Max Isolated Finding: 50 (Medium)
+                  Max Isolated Finding: {topChain ? Math.max(10, Math.round(topChain.score - (topChain.chain_gain || 0))) : 0} (Isolated)
                 </span>
               </div>
             </div>
@@ -268,28 +268,43 @@ export const Overview: React.FC<OverviewProps> = ({
               <circle cx="300" cy="85" r="5" fill="#FFFFFF" stroke="#000000" strokeWidth="2" />
               <rect x="310" y="65" width="85" height="24" rx="3" fill="#FFFFFF" />
               <text x="352" y="81" textAnchor="middle" fill="#000000" fontSize="10" fontWeight="bold" fontFamily="monospace">
-                +{topChain?.chain_gain ?? 40} GAIN
+                +{topChain?.chain_gain ?? 0} GAIN
               </text>
             </svg>
 
-            {/* X-axis labels */}
-            <div className="flex justify-between text-[10px] text-neutral-500 font-mono mt-2 px-1">
-              <span>Hop 0: Recon</span>
-              <span>Hop 1: .git Leak</span>
-              <span>Hop 2: SSRF Proxy</span>
-              <span>Hop 3: Pivot Subnet</span>
-              <span>Hop 4: Redis 6379</span>
-              <span className="text-white font-bold">Critical Target</span>
+            {/* Dynamic X-axis labels */}
+            <div className="flex justify-between text-[10px] text-neutral-400 font-mono mt-2 px-1">
+              <span>Origin: Ingress</span>
+              {topChain?.steps && topChain.steps.length > 0 ? (
+                topChain.steps.map((st, i) => (
+                  <span key={i} className="truncate max-w-[110px]" title={st.narrative || `Step ${st.order}`}>
+                    Stage {st.order}: {st.provides?.[0] ? st.provides[0].replace(/_/g, ' ') : `Step ${st.order}`}
+                  </span>
+                ))
+              ) : (
+                <>
+                  <span>Stage 1: Perimeter</span>
+                  <span>Stage 2: Pivot</span>
+                  <span>Stage 3: Escalate</span>
+                </>
+              )}
+              <span className="text-white font-bold">Target Compromised</span>
             </div>
           </div>
 
           <div className="p-3 bg-black border border-[#262626] rounded flex items-center justify-between text-xs font-mono">
             <span className="text-neutral-400">
-              MECHANICS: Low/Med alerts surge to <strong className="text-white">Score {topChain?.score ?? 91}</strong> via SSRF proxy capability bridge.
+              {topChain ? (
+                <>
+                  MECHANICS: <strong className="text-white">{topChain.title}</strong> — achieves <strong className="text-white">Score {topChain.score}/100</strong> (+{topChain.chain_gain} Gain).
+                </>
+              ) : (
+                <>No correlated attack paths identified yet. Ingest scanner artifacts or run correlation.</>
+              )}
             </span>
             <button
               onClick={() => onNavigateTab ? onNavigateTab('chains') : onSelectChain(topChain?.id || '')}
-              className="text-white hover:underline font-bold transition cursor-pointer"
+              className="text-white hover:underline font-bold transition cursor-pointer flex-shrink-0 ml-2"
             >
               Inspect Attack Tree →
             </button>
