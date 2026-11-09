@@ -35,19 +35,6 @@ def create_project(req: ProjectCreate, db: Session = Depends(get_db)):
 @router.get("", response_model=List[ProjectResponse])
 def list_projects(db: Session = Depends(get_db)):
     projects = db.query(Project).all()
-    # Create default demo project if empty
-    if not projects:
-        default_p = Project(
-            id="prj_demo",
-            name="SpiceHub Lab Assessment",
-            description="Isolated staging infrastructure assessment",
-            scope_json=json.dumps({"cidrs": ["10.77.0.0/24"], "lab_only": True}),
-            created_by="system",
-            created_at=utcnow_str()
-        )
-        db.add(default_p)
-        db.commit()
-        projects = [default_p]
 
     res = []
     for p in projects:

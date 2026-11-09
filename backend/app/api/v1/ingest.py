@@ -66,8 +66,8 @@ def load_demo_seed(project_id: str = "prj_demo", db: Session = Depends(get_db)):
     if not project:
         project = Project(
             id=project_id,
-            name="SpiceHub Lab Assessment",
-            description="Isolated multi-tier microservice environment",
+            name="Production Assessment Enclave",
+            description="Isolated enterprise microservice assessment",
             scope_json=json.dumps({"cidrs": ["10.77.0.0/24"], "lab_only": True}),
             created_by="system",
             created_at=utcnow_str()

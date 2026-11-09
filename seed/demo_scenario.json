@@ -1,6 +1,6 @@
 {
   "project": {
-    "name": "Demo: SpiceHub lab",
+    "name": "Correlated Assessment Lab",
     "scope": {
       "cidrs": [
         "10.77.0.0/24"

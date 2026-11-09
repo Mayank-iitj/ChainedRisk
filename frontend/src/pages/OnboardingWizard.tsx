@@ -400,7 +400,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   required
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="e.g. SpiceHub Lab Assessment"
+                  placeholder="e.g. Staging VPC Assessment"
                   className="w-full px-3.5 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-indigo-500 text-white"
                 />
               </div>

@@ -20,7 +20,7 @@ def populated_db():
 
     project = Project(
         id="prj_demo",
-        name="Demo: SpiceHub lab",
+        name="Correlated Assessment Lab",
         scope_json=json.dumps({"cidrs": ["10.77.0.0/24"], "lab_only": True})
     )
     db.add(project)

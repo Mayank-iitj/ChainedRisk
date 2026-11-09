@@ -337,7 +337,7 @@ export const App: React.FC = () => {
           auditValid={auditValid}
           killLocked={killLocked}
           currentUser={currentUser}
-          activeProjectName={currentUser?.onboarding_profile?.project_name || 'SpiceHub Lab Assessment'}
+          activeProjectName={currentUser?.onboarding_profile?.project_name || 'Active Security Enclave'}
           onOpenAuth={() => {
             setAuthModalMode('signin');
             setShowAuthModal(true);
@@ -360,8 +360,8 @@ export const App: React.FC = () => {
             <Overview
               stats={stats}
               chains={chains}
-              orgName={currentUser?.org_name || 'SpiceHub Logistics'}
-              projectName={currentUser?.onboarding_profile?.project_name || 'SpiceHub Lab Assessment'}
+              orgName={currentUser?.org_name || 'Enterprise Cyber Labs'}
+              projectName={currentUser?.onboarding_profile?.project_name || 'Active Security Enclave'}
               onSelectChain={(id) => {
                 setSelectedChainId(id);
                 setCurrentTab('chains');

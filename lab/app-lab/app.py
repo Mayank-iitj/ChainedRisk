@@ -5,7 +5,7 @@ app = Flask(__name__)
 GIT_CONFIG = "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = http://git.lab:80/app.git\n\t# internal redis cache: redis.lab:6379\n"
 
 @app.get("/")
-def index(): return "SpiceHub demo app (lab)"
+def index(): return "ChainedRisk Target Application (lab)"
 
 @app.get("/.git/config")
 def git_config(): return Response(GIT_CONFIG, mimetype="text/plain")
