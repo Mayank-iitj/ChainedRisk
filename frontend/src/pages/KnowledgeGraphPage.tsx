@@ -221,7 +221,7 @@ export const KnowledgeGraphPage: React.FC<KnowledgeGraphPageProps> = ({
 
             {onNavigateToChain && (
               <button
-                onClick={() => onNavigateToChain('chn_demo_01')}
+                onClick={() => onNavigateToChain(selectedNode.chain_id || '')}
                 className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-mono uppercase tracking-wider font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-indigo-950/50"
               >
                 <span>Inspect in Attack Chain</span>

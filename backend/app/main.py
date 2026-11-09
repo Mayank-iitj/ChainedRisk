@@ -53,99 +53,22 @@ def startup_populate_defaults():
 
     db = SessionLocal()
     try:
-        # Default user
-        admin = db.query(User).filter(User.username == "admin").first()
-        if not admin:
-            admin_user = User(
-                id="usr_admin",
-                username="admin",
-                email="admin@chainedrisk.internal",
-                full_name="Alex Vance (Admin)",
-                org_name="SpiceHub Enterprise",
-                title="Chief Information Security Officer",
-                pw_hash=hash_password("admin123"),
-                role="admin",
-                discord_id="discord_admin_001",
-                onboarding_completed=True,
-                active_project_id="prj_demo"
-            )
-            analyst_user = User(
-                id="usr_analyst",
-                username="analyst",
-                email="analyst@chainedrisk.internal",
-                full_name="Sarah Connor",
-                org_name="SpiceHub Enterprise",
-                title="Lead AppSec & VM Engineer",
-                pw_hash=hash_password("analyst123"),
-                role="analyst",
-                onboarding_completed=True,
-                active_project_id="prj_demo"
-            )
-            approver_user = User(
-                id="usr_approver",
-                username="approver",
-                email="approver@chainedrisk.internal",
-                full_name="Marcus Brody",
-                org_name="SpiceHub Enterprise",
-                title="Security Governance Director",
-                pw_hash=hash_password("approver123"),
-                role="approver",
-                onboarding_completed=True,
-                active_project_id="prj_demo"
-            )
-            db.add_all([admin_user, analyst_user, approver_user])
-            db.commit()
-        else:
-            # Ensure existing demo users have proper metadata
-            if not admin.org_name:
-                admin.org_name = "SpiceHub Enterprise"
-                admin.full_name = "Alex Vance (Admin)"
-                admin.title = "Chief Information Security Officer"
-                admin.onboarding_completed = True
-                admin.active_project_id = "prj_demo"
-                db.commit()
+        # Purge any legacy demo logins and demo project data
+        db.query(User).filter(
+            (User.id.in_(["usr_admin", "usr_analyst", "usr_approver"])) |
+            (User.username.in_(["admin", "analyst", "approver", "viewer"]))
+        ).delete(synchronize_session=False)
 
-        # Default project
-        proj = db.query(Project).filter(Project.id == "prj_demo").first()
-        if not proj:
-            import json
-            default_p = Project(
-                id="prj_demo",
-                name="SpiceHub Lab Assessment",
-                description="Production-mirrored isolated environment",
-                scope_json=json.dumps({"cidrs": ["10.77.0.0/24"], "lab_only": True}),
-                created_by="admin"
-            )
-            db.add(default_p)
-            db.commit()
+        demo_p = db.query(Project).filter(Project.id == "prj_demo").first()
+        if demo_p:
+            db.query(Finding).filter(Finding.project_id == "prj_demo").delete(synchronize_session=False)
+            db.query(Asset).filter(Asset.project_id == "prj_demo").delete(synchronize_session=False)
+            db.query(Chain).filter(Chain.project_id == "prj_demo").delete(synchronize_session=False)
+            db.delete(demo_p)
 
-        # Auto-seed live lab scenario telemetry if project has no findings yet
-        findings_count = db.query(Finding).filter(Finding.project_id == "prj_demo").count()
-        if findings_count == 0:
-            seed_demo = Path(__file__).resolve().parents[2] / "seed" / "demo_scenario.json"
-            if seed_demo.exists():
-                with open(seed_demo, "rb") as f:
-                    content = f.read()
-                process_ingest(
-                    db=db,
-                    project_id="prj_demo",
-                    file_bytes=content,
-                    source_tool="native",
-                    filename="demo_scenario.json",
-                    actor="system"
-                )
-
-        # Auto-correlate initial attack chain if no chains exist yet
-        chains_count = db.query(Chain).filter(Chain.project_id == "prj_demo").count()
-        if chains_count == 0:
-            chain_engine.correlate(
-                project_id="prj_demo",
-                db=db,
-                use_llm=False,
-                actor="system"
-            )
+        db.commit()
     except Exception as e:
-        print(f"[STARTUP] Notice during default seeding: {e}")
+        print(f"[STARTUP] Notice during initialization: {e}")
     finally:
         db.close()
 

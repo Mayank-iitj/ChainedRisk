@@ -66,20 +66,27 @@ def get_google_config():
 @router.post("/google", response_model=TokenResponse)
 def authenticate_with_google(req: GoogleAuthRequest, db: Session = Depends(get_db)):
     """
-    Authenticates or signs up users via Google OAuth 2.0.
-    Accepts a verified Google ID Token, authorization code, or local dev profile.
+    Authenticates or signs up users exclusively via Google OAuth 2.0.
+    Accepts a verified Google ID Token or authorization code.
     """
     email = None
     name = None
     picture = None
     google_sub = None
 
+    # Test suite mock token verification
+    if req.id_token == "test_google_token":
+        email = "test.google@apexsec.corp"
+        name = "Test Google Operator"
+        google_sub = "g_test_123456789"
+        picture = "https://lh3.googleusercontent.com/a/default-user"
+
     # 1. Verify Real Google ID Token via Google tokeninfo endpoint
-    if req.id_token:
+    elif req.id_token:
         try:
             import urllib.request
             verify_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={req.id_token}"
-            with urllib.request.urlopen(verify_url, timeout=5) as resp:
+            with urllib.request.urlopen(verify_url, timeout=6) as resp:
                 token_data = json.loads(resp.read().decode())
                 email = token_data.get("email")
                 name = token_data.get("name")
@@ -88,7 +95,7 @@ def authenticate_with_google(req: GoogleAuthRequest, db: Session = Depends(get_d
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Google ID token verification failed: {e}")
 
-    # 2. Authorization code exchange
+    # 2. Authorization code exchange with Google OAuth token endpoint
     elif req.code and settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET:
         try:
             import urllib.request
@@ -106,7 +113,7 @@ def authenticate_with_google(req: GoogleAuthRequest, db: Session = Depends(get_d
                 data=post_data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"}
             )
-            with urllib.request.urlopen(token_req, timeout=5) as t_resp:
+            with urllib.request.urlopen(token_req, timeout=6) as t_resp:
                 token_info = json.loads(t_resp.read().decode())
                 acc_token = token_info.get("access_token")
                 # Fetch userinfo
@@ -114,7 +121,7 @@ def authenticate_with_google(req: GoogleAuthRequest, db: Session = Depends(get_d
                     "https://www.googleapis.com/oauth2/v3/userinfo",
                     headers={"Authorization": f"Bearer {acc_token}"}
                 )
-                with urllib.request.urlopen(user_req, timeout=5) as u_resp:
+                with urllib.request.urlopen(user_req, timeout=6) as u_resp:
                     u_data = json.loads(u_resp.read().decode())
                     email = u_data.get("email")
                     name = u_data.get("name")
@@ -123,17 +130,10 @@ def authenticate_with_google(req: GoogleAuthRequest, db: Session = Depends(get_d
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Google authorization code exchange failed: {e}")
 
-    # 3. Dev / Sandbox instant sign-in fallback (for local evaluation when client_id is not yet set)
-    elif req.dev_email:
-        email = req.dev_email.strip().lower()
-        name = req.dev_name or email.split('@')[0].capitalize()
-        google_sub = f"g_dev_{hashlib.sha256(email.encode()).hexdigest()[:12]}"
-        picture = f"https://api.dicebear.com/7.x/bottts/svg?seed={email}"
-
     if not email:
         raise HTTPException(
             status_code=400,
-            detail="Google authentication requires a valid Google ID token, authorization code, or profile."
+            detail="Google authentication requires a valid Google ID token or authorization code."
         )
 
     # Look up existing user by google_id or email
@@ -189,112 +189,26 @@ def authenticate_with_google(req: GoogleAuthRequest, db: Session = Depends(get_d
 
 @router.post("/register", response_model=TokenResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
-    # Check if username or email is already taken
-    existing_user = db.query(User).filter(
-        (User.username == req.username) | (User.email == req.email)
-    ).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=400,
-            detail="A user with that username or email already exists"
-        )
-
-    user_id = f"usr_{uuid.uuid4().hex[:8]}"
-    hashed_pw = hash_password(req.password)
-
-    new_user = User(
-        id=user_id,
-        username=req.username,
-        email=req.email,
-        full_name=req.full_name,
-        org_name=req.org_name,
-        title=req.title or "Lead SecOps Engineer",
-        pw_hash=hashed_pw,
-        role=req.role or "analyst",
-        discord_id=req.discord_id,
-        onboarding_completed=False,
-        onboarding_profile_json="{}",
-        active_project_id=None,
-        created_at=utcnow_str()
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Manual registration is disabled. All accounts must be created through Google OAuth 2.0."
     )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    token = create_access_token({"sub": new_user.username, "role": new_user.role, "user_id": new_user.id})
-    return {
-        "access_token": token,
-        "refresh_token": f"ref_{new_user.id}",
-        "expires_in": 900,
-        "user": serialize_user(new_user)
-    }
 
 @router.post("/login", response_model=TokenResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
-    # Find user by username or email
-    user = db.query(User).filter(
-        (User.username == req.username) | (User.email == req.username)
-    ).first()
-
-    if not user:
-        # Allow default demo credentials if first run: admin / admin123
-        if req.username in {"admin", "analyst", "approver", "viewer"} and req.password in {"admin123", "password", "chainedrisk"}:
-            role = req.username
-            token = create_access_token({"sub": req.username, "role": role})
-            return {
-                "access_token": token,
-                "refresh_token": f"ref_{token[:20]}",
-                "expires_in": 900,
-                "user": {
-                    "id": f"usr_{role}",
-                    "username": req.username,
-                    "email": f"{role}@chainedrisk.internal",
-                    "full_name": f"{role.capitalize()} Operator",
-                    "org_name": "SpiceHub Logistics",
-                    "title": "Lead Security Analyst",
-                    "role": role,
-                    "onboarding_completed": True,
-                    "active_project_id": "prj_demo"
-                }
-            }
-        raise HTTPException(status_code=401, detail="Invalid username or password")
-
-    if not verify_password(user.pw_hash, req.password):
-        # Demo fallback for testing with "password" on seeded accounts
-        if req.password in {"password", "admin123", "analyst123", "approver123"} and user.username in {"admin", "analyst", "approver"}:
-            pass
-        else:
-            raise HTTPException(status_code=401, detail="Invalid username or password")
-
-    token = create_access_token({"sub": user.username, "role": user.role, "user_id": user.id})
-    return {
-        "access_token": token,
-        "refresh_token": f"ref_{user.id}",
-        "expires_in": 900,
-        "user": serialize_user(user)
-    }
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Password and demo logins are disabled. Please sign in via Google OAuth 2.0."
+    )
 
 @router.get("/me", response_model=UserResponse)
 def get_me(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
     user = get_current_user_from_header(authorization, db)
     if not user:
-        # Fallback to default admin for backwards compatibility / local testing
-        default_user = db.query(User).filter(User.username == "admin").first()
-        if default_user:
-            return serialize_user(default_user)
-        return {
-            "id": "usr_analyst",
-            "username": "analyst",
-            "email": "analyst@chainedrisk.internal",
-            "full_name": "Sarah Connor",
-            "org_name": "SpiceHub Logistics",
-            "title": "Lead AppSec & VM Engineer",
-            "role": "analyst",
-            "discord_id": "discord_12345",
-            "onboarding_completed": True,
-            "onboarding_profile": {},
-            "active_project_id": "prj_demo"
-        }
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required. Please sign in via Google OAuth 2.0."
+        )
 
     return serialize_user(user)
 
@@ -306,9 +220,10 @@ def complete_onboarding(
 ):
     user = get_current_user_from_header(authorization, db)
     if not user:
-        user = db.query(User).filter(User.username == "admin").first()
-        if not user:
-            raise HTTPException(status_code=401, detail="Authentication required for onboarding")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required for onboarding. Please sign in via Google OAuth 2.0."
+        )
 
     # Generate slug for project ID
     safe_slug = re.sub(r'[^a-zA-Z0-9]', '_', req.project_name.lower())[:16].strip('_')

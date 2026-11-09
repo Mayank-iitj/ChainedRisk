@@ -94,7 +94,7 @@ export const Overview: React.FC<OverviewProps> = ({
           className="flex items-center gap-2 bg-[#6366F1] hover:bg-[#4F46E5] active:bg-[#4338CA] text-white font-mono text-xs font-semibold px-4 py-2 rounded-xl shadow-glow-indigo transition cursor-pointer disabled:opacity-60"
         >
           <PlayCircle className="w-4 h-4" />
-          <span>{loading ? 'CORRELATING...' : 'LOAD DEMO LAB SCENARIO'}</span>
+          <span>{loading ? 'CORRELATING...' : 'RUN ATTACK CORRELATION'}</span>
         </button>
       </div>
 
@@ -306,7 +306,7 @@ export const Overview: React.FC<OverviewProps> = ({
               <div className="py-8 text-center text-slate-500 space-y-2 font-mono">
                 <p className="text-xs">No assets mapped yet in this project.</p>
                 <button
-                  onClick={() => onNavigateTab ? onNavigateTab('ingest') : onLoadDemo()}
+                  onClick={() => onNavigateTab && onNavigateTab('ingest')}
                   className="text-xs text-[#6366F1] font-bold hover:underline cursor-pointer"
                 >
                   Ingest Scans in Ingest Studio →
@@ -373,12 +373,12 @@ export const Overview: React.FC<OverviewProps> = ({
             {filteredChains.length === 0 ? (
               <div className="p-8 text-center text-slate-500 space-y-2 font-mono">
                 <p className="text-xs">No attack chains matched filter "{tableFilter}".</p>
-                {chains.length === 0 && (
+                {chains.length === 0 && onNavigateTab && (
                   <button
-                    onClick={onLoadDemo}
+                    onClick={() => onNavigateTab('ingest')}
                     className="text-xs text-[#6366F1] font-bold hover:underline cursor-pointer"
                   >
-                    Click here to load demo attack scenario →
+                    Click here to ingest scanner telemetry →
                   </button>
                 )}
               </div>

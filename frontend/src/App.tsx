@@ -45,7 +45,7 @@ export const App: React.FC = () => {
     return window.location.hash === '#app' ? 'app' : 'landing';
   });
   const [currentTab, setCurrentTab] = useState('overview');
-  const [projectId, setProjectId] = useState('prj_demo');
+  const [projectId, setProjectId] = useState('');
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [chains, setChains] = useState<AttackChain[]>([]);
   const [approvals, setApprovals] = useState<ApprovalCard[]>([]);
@@ -72,10 +72,20 @@ export const App: React.FC = () => {
           if (!user.onboarding_completed && viewMode === 'app') {
             setShowOnboarding(true);
           }
+        } else {
+          setCurrentUser(null);
+          if (viewMode === 'app') {
+            setViewMode('landing');
+            window.location.hash = '';
+          }
         }
       } catch (err) {
         // Guest or expired session
         setCurrentUser(null);
+        if (viewMode === 'app') {
+          setViewMode('landing');
+          window.location.hash = '';
+        }
       }
     };
     initAuth();
@@ -202,14 +212,14 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleLoadDemo = async () => {
+  const handleRunCorrelation = async () => {
+    if (!projectId) return;
     setLoading(true);
     try {
-      await loadDemoScenario(projectId);
       await correlateProject(projectId, false);
       await refreshAllData();
     } catch (e: any) {
-      alert(`Demo load failed: ${e.message}`);
+      alert(`Correlation failed: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -218,7 +228,7 @@ export const App: React.FC = () => {
   const handleLogout = async () => {
     await logoutUser();
     setCurrentUser(null);
-    setProjectId('prj_demo');
+    setProjectId('');
     setViewMode('landing');
     window.location.hash = '';
   };
@@ -265,11 +275,15 @@ export const App: React.FC = () => {
             setAuthModalMode(mode || 'signin');
             setShowAuthModal(true);
           }}
-          onExploreScenario={async () => {
-            await handleLoadDemo();
-            window.location.hash = '#app';
-            setViewMode('app');
-            setCurrentTab('chains');
+          onExploreScenario={() => {
+            if (!currentUser) {
+              setAuthModalMode('signin');
+              setShowAuthModal(true);
+            } else {
+              window.location.hash = '#app';
+              setViewMode('app');
+              setCurrentTab('chains');
+            }
           }}
         />
 
@@ -352,7 +366,7 @@ export const App: React.FC = () => {
                 setSelectedChainId(id);
                 setCurrentTab('chains');
               }}
-              onLoadDemo={handleLoadDemo}
+              onLoadDemo={handleRunCorrelation}
               loading={loading}
               onNavigateTab={setCurrentTab}
             />

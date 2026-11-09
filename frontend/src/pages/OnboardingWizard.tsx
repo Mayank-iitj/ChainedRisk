@@ -183,15 +183,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               </p>
             </div>
           </div>
-
-          {onSkip && !loading && (
-            <button
-              onClick={onSkip}
-              className="text-xs text-slate-400 hover:text-white transition underline cursor-pointer"
-            >
-              Skip Setup (Use Demo)
-            </button>
-          )}
         </div>
 
         {/* Step Progress Stepper */}
