@@ -155,3 +155,42 @@ export interface AuditEvent {
   hash: string;
 }
 
+export interface UserProfile {
+  id: string;
+  username: string;
+  email?: string;
+  full_name?: string;
+  org_name?: string;
+  title?: string;
+  role: string;
+  discord_id?: string;
+  onboarding_completed: boolean;
+  onboarding_profile?: OnboardingProfileData;
+  active_project_id?: string;
+}
+
+export interface OnboardingAssetInput {
+  name: string;
+  ip: string;
+  type: string;
+  zone: string;
+  services: string[];
+  datastores: string[];
+}
+
+export interface OnboardingProfileData {
+  org_name: string;
+  industry: string;
+  environment: string;
+  risk_tolerance: string;
+  project_name: string;
+  project_description?: string;
+  scope_cidrs: string[];
+  ingress_assets: OnboardingAssetInput[];
+  crown_jewels: OnboardingAssetInput[];
+  active_scanners: string[];
+  notification_channel?: string;
+  notification_webhook?: string;
+  seed_baseline_scenario?: boolean;
+}
+

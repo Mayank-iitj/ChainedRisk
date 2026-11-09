@@ -22,6 +22,8 @@ interface OverviewProps {
   onSelectChain: (chainId: string) => void;
   onLoadDemo: () => void;
   loading: boolean;
+  projectName?: string;
+  orgName?: string;
 }
 
 export const Overview: React.FC<OverviewProps> = ({
@@ -29,7 +31,9 @@ export const Overview: React.FC<OverviewProps> = ({
   chains,
   onSelectChain,
   onLoadDemo,
-  loading
+  loading,
+  projectName,
+  orgName
 }) => {
   const [timeFilter, setTimeFilter] = React.useState<'all' | '1m' | '6m' | '1y'>('all');
   const [tableFilter, setTableFilter] = React.useState<'all' | 'active' | 'verified'>('all');
@@ -64,7 +68,7 @@ export const Overview: React.FC<OverviewProps> = ({
       <div className="reveal-block flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-[#64748b]">
-            <span className="text-[#6366f1] font-bold">Dashboard</span> / Risk Correlation & Attack Paths
+            <span className="text-[#6366f1] font-bold">{orgName || 'Workspace'}</span> / {projectName || 'Risk Correlation & Attack Paths'}
           </div>
           <h2 className="text-xl font-extrabold text-[#0f172a] tracking-tight mt-0.5">
             Security Overview

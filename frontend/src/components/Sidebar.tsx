@@ -12,17 +12,34 @@ import {
   Shield,
   ChevronDown,
   Layers,
-  Sparkles
+  Sparkles,
+  LogOut,
+  Sliders,
+  LogIn
 } from 'lucide-react';
+import { UserProfile } from '../types';
 
 interface SidebarProps {
   currentTab: string;
   onSelectTab: (tab: string) => void;
   pendingApprovalsCount: number;
   onGoLanding?: () => void;
+  currentUser?: UserProfile | null;
+  onOpenAuth?: () => void;
+  onLogout?: () => void;
+  onOpenOnboarding?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, pendingApprovalsCount, onGoLanding }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  currentTab,
+  onSelectTab,
+  pendingApprovalsCount,
+  onGoLanding,
+  currentUser,
+  onOpenAuth,
+  onLogout,
+  onOpenOnboarding
+}) => {
   const menuSections = [
     {
       title: 'MENU',
@@ -136,17 +153,75 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, pendi
       </nav>
 
       {/* User profile strip at bottom */}
-      <div className="p-4 mx-3 mb-3 border border-[#eef2f6] rounded-2xl bg-[#f8fafc] flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-[#e0e7ff] text-[#4f46e5] font-bold flex items-center justify-center text-xs">
-            SA
+      <div className="p-3.5 mx-3 mb-3 border border-[#eef2f6] rounded-2xl bg-[#f8fafc] text-xs space-y-2">
+        {currentUser ? (
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-[#e0e7ff] text-[#4f46e5] font-extrabold flex items-center justify-center text-xs flex-shrink-0">
+                  {currentUser.full_name
+                    ? currentUser.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+                    : currentUser.username.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="truncate">
+                  <div className="font-bold text-[#0f172a] truncate">
+                    {currentUser.full_name || currentUser.username}
+                  </div>
+                  <div className="text-[10px] text-[#64748b] truncate font-medium">
+                    {currentUser.org_name || 'Enclave Workspace'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                {onOpenOnboarding && (
+                  <button
+                    onClick={onOpenOnboarding}
+                    title="Perimeter & Onboarding Settings"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-200 transition cursor-pointer"
+                  >
+                    <Sliders className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {onLogout && (
+                  <button
+                    onClick={onLogout}
+                    title="Sign Out"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px]">
+              <span className="text-[#94a3b8] font-mono truncate max-w-[140px]">
+                {currentUser.title || currentUser.role.toUpperCase()}
+              </span>
+              <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                ONLINE
+              </span>
+            </div>
           </div>
-          <div className="truncate">
-            <div className="font-bold text-[#0f172a] truncate">Security Analyst</div>
-            <div className="text-[10px] text-[#94a3b8] font-mono">SOC / VM Lead</div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-slate-500">
+              <div className="font-bold text-slate-700">Guest Session</div>
+              <div className="text-[10px]">Read-only preview</div>
+            </div>
+            {onOpenAuth && (
+              <button
+                onClick={onOpenAuth}
+                className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <LogIn className="w-3 h-3" />
+                <span>Sign In</span>
+              </button>
+            )}
           </div>
-        </div>
-        <div className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" title="System Online"></div>
+        )}
       </div>
     </aside>
   );

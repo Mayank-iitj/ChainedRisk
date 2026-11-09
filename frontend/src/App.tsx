@@ -13,6 +13,8 @@ import { Audit } from './pages/Audit';
 import { Reports } from './pages/Reports';
 import { FindingsList } from './pages/FindingsList';
 import { LandingPage } from './pages/LandingPage';
+import { AuthModal } from './components/AuthModal';
+import { OnboardingWizard } from './pages/OnboardingWizard';
 import {
   fetchProjects,
   fetchProjectStats,
@@ -22,11 +24,19 @@ import {
   verifyAuditLedger,
   fetchPublicConfig,
   loadDemoScenario,
-  correlateProject
+  correlateProject,
+  fetchCurrentUser,
+  logoutUser,
+  getAuthToken
 } from './api';
-import { ProjectStats, AttackChain, ApprovalCard } from './types';
+import { ProjectStats, AttackChain, ApprovalCard, UserProfile } from './types';
 
 export const App: React.FC = () => {
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
   const [viewMode, setViewMode] = useState<'landing' | 'app'>(() => {
     return window.location.hash === '#app' ? 'app' : 'landing';
   });
@@ -44,6 +54,28 @@ export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const mainRef = React.useRef<HTMLElement | null>(null);
+
+  // Restore authenticated session on load
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const user = await fetchCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          if (user.active_project_id) {
+            setProjectId(user.active_project_id);
+          }
+          if (!user.onboarding_completed && viewMode === 'app') {
+            setShowOnboarding(true);
+          }
+        }
+      } catch (err) {
+        // Guest or expired session
+        setCurrentUser(null);
+      }
+    };
+    initAuth();
+  }, []);
 
   // Global scroll-to-reveal observer for all pages
   useEffect(() => {
@@ -179,20 +211,83 @@ export const App: React.FC = () => {
     }
   };
 
-  if (viewMode === 'landing') {
+  const handleLogout = async () => {
+    await logoutUser();
+    setCurrentUser(null);
+    setProjectId('prj_demo');
+    setViewMode('landing');
+    window.location.hash = '';
+  };
+
+  // If user is logged in but hasn't completed onboarding, show Onboarding Wizard
+  if (showOnboarding && currentUser) {
     return (
-      <LandingPage
-        onLaunchApp={() => {
-          window.location.hash = '#app';
+      <OnboardingWizard
+        currentUser={currentUser}
+        onComplete={(newPid, updatedUser) => {
+          setProjectId(newPid);
+          setCurrentUser(updatedUser);
+          setShowOnboarding(false);
           setViewMode('app');
+          window.location.hash = '#app';
+          refreshAllData();
         }}
-        onExploreScenario={async () => {
-          await handleLoadDemo();
-          window.location.hash = '#app';
+        onSkip={() => {
+          setShowOnboarding(false);
           setViewMode('app');
-          setCurrentTab('chains');
+          window.location.hash = '#app';
         }}
       />
+    );
+  }
+
+  if (viewMode === 'landing') {
+    return (
+      <>
+        <LandingPage
+          currentUser={currentUser}
+          onLaunchApp={() => {
+            if (!currentUser) {
+              setAuthModalMode('signin');
+              setShowAuthModal(true);
+            } else if (!currentUser.onboarding_completed) {
+              setShowOnboarding(true);
+            } else {
+              window.location.hash = '#app';
+              setViewMode('app');
+            }
+          }}
+          onOpenAuth={(mode) => {
+            setAuthModalMode(mode || 'signin');
+            setShowAuthModal(true);
+          }}
+          onExploreScenario={async () => {
+            await handleLoadDemo();
+            window.location.hash = '#app';
+            setViewMode('app');
+            setCurrentTab('chains');
+          }}
+        />
+
+        <AuthModal
+          isOpen={showAuthModal}
+          initialMode={authModalMode}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={(user) => {
+            setCurrentUser(user);
+            if (user.active_project_id) {
+              setProjectId(user.active_project_id);
+            }
+            if (!user.onboarding_completed) {
+              setShowOnboarding(true);
+            } else {
+              window.location.hash = '#app';
+              setViewMode('app');
+            }
+            refreshAllData();
+          }}
+        />
+      </>
     );
   }
 
@@ -203,6 +298,13 @@ export const App: React.FC = () => {
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         pendingApprovalsCount={approvals.length}
+        currentUser={currentUser}
+        onOpenAuth={() => {
+          setAuthModalMode('signin');
+          setShowAuthModal(true);
+        }}
+        onLogout={handleLogout}
+        onOpenOnboarding={() => setShowOnboarding(true)}
         onGoLanding={() => {
           window.location.hash = '';
           setViewMode('landing');
@@ -216,6 +318,13 @@ export const App: React.FC = () => {
           pendingCount={approvals.length}
           auditValid={auditValid}
           killLocked={killLocked}
+          currentUser={currentUser}
+          activeProjectName={currentUser?.onboarding_profile?.project_name || 'SpiceHub Lab Assessment'}
+          onOpenAuth={() => {
+            setAuthModalMode('signin');
+            setShowAuthModal(true);
+          }}
+          onOpenOnboarding={() => setShowOnboarding(true)}
           searchQuery={searchQuery}
           onSearchChange={(q) => {
             setSearchQuery(q);
@@ -233,6 +342,8 @@ export const App: React.FC = () => {
             <Overview
               stats={stats}
               chains={chains}
+              orgName={currentUser?.org_name || 'SpiceHub Logistics'}
+              projectName={currentUser?.onboarding_profile?.project_name || 'SpiceHub Lab Assessment'}
               onSelectChain={(id) => {
                 setSelectedChainId(id);
                 setCurrentTab('chains');
@@ -321,6 +432,23 @@ export const App: React.FC = () => {
           }}
         />
       )}
+
+      {/* Auth Modal inside App layout */}
+      <AuthModal
+        isOpen={showAuthModal}
+        initialMode={authModalMode}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={(user) => {
+          setCurrentUser(user);
+          if (user.active_project_id) {
+            setProjectId(user.active_project_id);
+          }
+          if (!user.onboarding_completed) {
+            setShowOnboarding(true);
+          }
+          refreshAllData();
+        }}
+      />
     </div>
   );
 };

@@ -18,8 +18,37 @@ from backend.app.api.v1 import (
 Base.metadata.create_all(bind=engine)
 
 from contextlib import asynccontextmanager
+from sqlalchemy import text
+
+def migrate_sqlite_columns():
+    """Safely add new columns to SQLite tables if they exist from older schema versions."""
+    try:
+        with engine.connect() as conn:
+            existing_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(users)"))]
+            if existing_cols:
+                needed = [
+                    ("email", "VARCHAR"),
+                    ("full_name", "VARCHAR"),
+                    ("org_name", "VARCHAR"),
+                    ("title", "VARCHAR"),
+                    ("onboarding_completed", "BOOLEAN DEFAULT 0"),
+                    ("onboarding_profile_json", "TEXT DEFAULT '{}'"),
+                    ("active_project_id", "VARCHAR"),
+                    ("created_at", "VARCHAR")
+                ]
+                for col_name, col_type in needed:
+                    if col_name not in existing_cols:
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}"))
+                conn.commit()
+    except Exception as e:
+        print(f"[STARTUP] Column migration notice: {e}")
+
+# Run column migrations on import
+migrate_sqlite_columns()
 
 def startup_populate_defaults():
+    migrate_sqlite_columns()
+
     db = SessionLocal()
     try:
         # Default user
@@ -28,24 +57,51 @@ def startup_populate_defaults():
             admin_user = User(
                 id="usr_admin",
                 username="admin",
+                email="admin@chainedrisk.internal",
+                full_name="Alex Vance (Admin)",
+                org_name="SpiceHub Enterprise",
+                title="Chief Information Security Officer",
                 pw_hash=hash_password("admin123"),
                 role="admin",
-                discord_id="discord_admin_001"
+                discord_id="discord_admin_001",
+                onboarding_completed=True,
+                active_project_id="prj_demo"
             )
             analyst_user = User(
                 id="usr_analyst",
                 username="analyst",
+                email="analyst@chainedrisk.internal",
+                full_name="Sarah Connor",
+                org_name="SpiceHub Enterprise",
+                title="Lead AppSec & VM Engineer",
                 pw_hash=hash_password("analyst123"),
-                role="analyst"
+                role="analyst",
+                onboarding_completed=True,
+                active_project_id="prj_demo"
             )
             approver_user = User(
                 id="usr_approver",
                 username="approver",
+                email="approver@chainedrisk.internal",
+                full_name="Marcus Brody",
+                org_name="SpiceHub Enterprise",
+                title="Security Governance Director",
                 pw_hash=hash_password("approver123"),
-                role="approver"
+                role="approver",
+                onboarding_completed=True,
+                active_project_id="prj_demo"
             )
             db.add_all([admin_user, analyst_user, approver_user])
             db.commit()
+        else:
+            # Ensure existing demo users have proper metadata
+            if not admin.org_name:
+                admin.org_name = "SpiceHub Enterprise"
+                admin.full_name = "Alex Vance (Admin)"
+                admin.title = "Chief Information Security Officer"
+                admin.onboarding_completed = True
+                admin.active_project_id = "prj_demo"
+                db.commit()
 
         # Default project
         proj = db.query(Project).filter(Project.id == "prj_demo").first()

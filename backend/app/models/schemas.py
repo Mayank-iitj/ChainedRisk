@@ -6,6 +6,39 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    full_name: str
+    org_name: str
+    title: Optional[str] = "Lead SecOps Engineer"
+    role: Optional[str] = "analyst"
+    discord_id: Optional[str] = None
+
+class OnboardingAssetInput(BaseModel):
+    name: str
+    ip: str
+    type: str = "Host"
+    zone: str = "dmz"
+    services: List[str] = Field(default_factory=list)
+    datastores: List[str] = Field(default_factory=list)
+
+class OnboardingRequest(BaseModel):
+    org_name: str
+    industry: str
+    environment: str
+    risk_tolerance: str = "standard" # zero_tolerance, standard, high_gain_only
+    project_name: str
+    project_description: Optional[str] = ""
+    scope_cidrs: List[str] = Field(default_factory=lambda: ["10.77.0.0/24"])
+    ingress_assets: List[OnboardingAssetInput] = Field(default_factory=list)
+    crown_jewels: List[OnboardingAssetInput] = Field(default_factory=list)
+    active_scanners: List[str] = Field(default_factory=lambda: ["nmap", "gitleaks", "nuclei", "httpx"])
+    notification_channel: Optional[str] = "discord"
+    notification_webhook: Optional[str] = ""
+    seed_baseline_scenario: bool = True
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -15,8 +48,15 @@ class TokenResponse(BaseModel):
 class UserResponse(BaseModel):
     id: str
     username: str
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    org_name: Optional[str] = None
+    title: Optional[str] = None
     role: str
     discord_id: Optional[str] = None
+    onboarding_completed: bool = False
+    onboarding_profile: Optional[Dict[str, Any]] = None
+    active_project_id: Optional[str] = None
 
 # Scope & Project
 class ScopeModel(BaseModel):

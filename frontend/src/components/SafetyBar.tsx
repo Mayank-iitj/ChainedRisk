@@ -14,6 +14,7 @@ import {
   Cpu
 } from 'lucide-react';
 import { triggerKillSwitch, resetKillSwitch } from '../api';
+import { UserProfile } from '../types';
 
 interface SafetyBarProps {
   pendingCount: number;
@@ -23,6 +24,10 @@ interface SafetyBarProps {
   onSearchChange?: (q: string) => void;
   onKillStateChange: () => void;
   onOpenApprovals: () => void;
+  currentUser?: UserProfile | null;
+  activeProjectName?: string;
+  onOpenAuth?: () => void;
+  onOpenOnboarding?: () => void;
 }
 
 export const SafetyBar: React.FC<SafetyBarProps> = ({
@@ -32,7 +37,11 @@ export const SafetyBar: React.FC<SafetyBarProps> = ({
   searchQuery = '',
   onSearchChange,
   onKillStateChange,
-  onOpenApprovals
+  onOpenApprovals,
+  currentUser,
+  activeProjectName,
+  onOpenAuth,
+  onOpenOnboarding
 }) => {
   const [showKillModal, setShowKillModal] = useState(false);
   const [killReason, setKillReason] = useState('Emergency operator override');
@@ -85,28 +94,25 @@ export const SafetyBar: React.FC<SafetyBarProps> = ({
 
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-mono whitespace-nowrap">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            LAB SCOPE (10.77.0.0/24)
+            LAB SCOPE ({currentUser?.onboarding_profile?.scope_cidrs?.[0] || '10.77.0.0/24'})
           </div>
         </div>
 
         {/* Right side controls matching screenshot */}
         <div className="flex items-center gap-3">
           {/* Action icon buttons */}
-          <button className="w-8 h-8 rounded-full flex items-center justify-center text-[#64748b] hover:text-[#0f172a] hover:bg-[#f8fafc] transition cursor-pointer">
-            <Sun className="w-4 h-4" />
-          </button>
-
-          <button className="w-8 h-8 rounded-full flex items-center justify-center text-[#64748b] hover:text-[#0f172a] hover:bg-[#f8fafc] transition cursor-pointer">
+          <button
+            onClick={onOpenOnboarding}
+            title="Workspace Perimeter Settings"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#64748b] hover:text-[#0f172a] hover:bg-[#f8fafc] transition cursor-pointer"
+          >
             <Settings className="w-4 h-4" />
-          </button>
-
-          <button className="w-8 h-8 rounded-full flex items-center justify-center text-[#64748b] hover:text-[#0f172a] hover:bg-[#f8fafc] transition cursor-pointer">
-            <Mail className="w-4 h-4" />
           </button>
 
           {/* Notifications / Approvals Bell */}
           <button
             onClick={onOpenApprovals}
+            title={`${pendingCount} Pending Approvals`}
             className="w-8 h-8 rounded-full flex items-center justify-center text-[#64748b] hover:text-[#0f172a] hover:bg-[#f8fafc] relative transition cursor-pointer"
           >
             <Bell className="w-4 h-4" />
@@ -122,16 +128,35 @@ export const SafetyBar: React.FC<SafetyBarProps> = ({
           </div>
 
           {/* User Profile */}
-          <div className="flex items-center gap-2.5 border-l border-[#eef2f6] pl-4 cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#6366f1] to-[#a855f7] text-white font-bold flex items-center justify-center text-xs shadow-sm">
-              RD
+          {currentUser ? (
+            <div
+              onClick={onOpenOnboarding}
+              className="flex items-center gap-2.5 border-l border-[#eef2f6] pl-4 cursor-pointer hover:opacity-85 transition"
+              title="Click to view Workspace Profile"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#6366f1] to-[#a855f7] text-white font-extrabold flex items-center justify-center text-xs shadow-sm flex-shrink-0">
+                {currentUser.full_name
+                  ? currentUser.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+                  : currentUser.username.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="text-left hidden sm:block">
+                <div className="text-xs font-bold text-[#0f172a] leading-none">
+                  {currentUser.full_name || currentUser.username}
+                </div>
+                <div className="text-[10px] text-[#64748b] mt-0.5 truncate max-w-[130px]">
+                  {currentUser.org_name || 'Enclave Workspace'}
+                </div>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-[#94a3b8]" />
             </div>
-            <div className="text-left hidden sm:block">
-              <div className="text-xs font-bold text-[#0f172a] leading-none">Robert Doe</div>
-              <div className="text-[10px] text-[#94a3b8] mt-0.5">Founder / Lead</div>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-[#94a3b8]" />
-          </div>
+          ) : (
+            <button
+              onClick={onOpenAuth}
+              className="px-3 py-1.5 bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold text-xs rounded-xl shadow-sm transition cursor-pointer"
+            >
+              Sign In
+            </button>
+          )}
 
           {/* Emergency Kill Switch Button */}
           <div className="border-l border-[#eef2f6] pl-3">

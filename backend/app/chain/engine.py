@@ -162,8 +162,8 @@ class ChainEngine:
         persisted_chains = []
         for idx, vc in enumerate(valid_chains):
             chain_id = f"chn_{uuid.uuid4().hex[:8]}"
-            if idx == 0:
-                chain_id = "chn_demo_01" # stable ID for demo
+            if idx == 0 and project_id == "prj_demo":
+                chain_id = "chn_demo_01" # stable ID for demo project
 
             chain_obj = Chain(
                 id=chain_id,

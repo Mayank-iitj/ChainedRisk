@@ -68,9 +68,10 @@ def test_api_full_journey():
     assert res.status_code == 200
     remediations = res.json()
     assert len(remediations) > 0
+    top_fix_id = remediations[0]["finding_id"]
 
     # 11. Simulate fix
-    res = client.post("/api/v1/projects/prj_demo/simulate-fix", json=["fnd_ssrf"])
+    res = client.post("/api/v1/projects/prj_demo/simulate-fix", json=[top_fix_id])
     assert res.status_code == 200
     assert res.json()["chains_collapsed"] >= 1
 
@@ -88,3 +89,86 @@ def test_api_full_journey():
     res = client.post("/api/v1/projects/prj_demo/reports?format=md")
     assert res.status_code == 200
     assert "Executive Security Assessment Report" in res.json()["content"]
+
+def test_auth_registration_and_onboarding_workflow():
+    import uuid
+    uid = uuid.uuid4().hex[:6]
+    test_user = f"secops_{uid}"
+    test_email = f"secops_{uid}@enterprise.corp"
+
+    # 1. Register new user
+    reg_res = client.post("/api/v1/auth/register", json={
+        "username": test_user,
+        "email": test_email,
+        "password": "StrongPassword123!",
+        "full_name": "Jordan Bell",
+        "org_name": "Apex Cyber Labs",
+        "title": "Principal Detection Engineer",
+        "role": "analyst"
+    })
+    assert reg_res.status_code == 200
+    reg_data = reg_res.json()
+    token = reg_data["access_token"]
+    user = reg_data["user"]
+    assert user["onboarding_completed"] is False
+    assert user["username"] == test_user
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 2. Check /me before onboarding
+    me_res = client.get("/api/v1/auth/me", headers=headers)
+    assert me_res.status_code == 200
+    assert me_res.json()["onboarding_completed"] is False
+
+    # 3. Complete onboarding
+    onboard_res = client.post("/api/v1/auth/onboarding", headers=headers, json={
+        "org_name": "Apex Cyber Labs",
+        "industry": "FinTech / High Frequency Trading",
+        "environment": "AWS Multi-Account + EKS Staging",
+        "risk_tolerance": "zero_tolerance",
+        "project_name": "Apex Production Settlement Pipeline",
+        "project_description": "Dedicated zero-trust assessment of settlement DMZ",
+        "scope_cidrs": ["10.77.0.0/24"],
+        "ingress_assets": [
+            {
+                "name": "apex-gateway.dmz",
+                "ip": "10.77.0.10",
+                "type": "Host",
+                "zone": "dmz",
+                "services": ["flask", "envoy"],
+                "datastores": []
+            }
+        ],
+        "crown_jewels": [
+            {
+                "name": "apex-settlement-redis.internal",
+                "ip": "10.77.0.12",
+                "type": "Host",
+                "zone": "internal",
+                "services": ["redis"],
+                "datastores": ["ds_ledger_cache"]
+            }
+        ],
+        "active_scanners": ["nmap", "gitleaks", "nuclei", "httpx"],
+        "notification_channel": "discord",
+        "seed_baseline_scenario": True
+    })
+    assert onboard_res.status_code == 200
+    onboard_data = onboard_res.json()
+    assert onboard_data["status"] == "completed"
+    new_pid = onboard_data["project_id"]
+    assert new_pid is not None
+
+    # 4. Verify /me now reports onboarding_completed: True and active_project_id
+    me_updated = client.get("/api/v1/auth/me", headers=headers)
+    assert me_updated.status_code == 200
+    assert me_updated.json()["onboarding_completed"] is True
+    assert me_updated.json()["active_project_id"] == new_pid
+
+    # 5. Verify stats on the new customized project
+    stats_res = client.get(f"/api/v1/projects/{new_pid}/stats")
+    assert stats_res.status_code == 200
+    sdata = stats_res.json()
+    assert sdata["findings"] > 0
+    assert sdata["chains"] >= 1
+    assert len(sdata["target_assets"]) > 0

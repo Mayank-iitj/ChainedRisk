@@ -10,9 +10,17 @@ class User(Base):
     __tablename__ = "users"
     id = Column(String, primary_key=True)
     username = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True, nullable=True)
+    full_name = Column(String, nullable=True)
+    org_name = Column(String, nullable=True)
+    title = Column(String, nullable=True)
     pw_hash = Column(String, nullable=False)
     role = Column(String, default="analyst") # viewer, analyst, approver, admin
     discord_id = Column(String, nullable=True)
+    onboarding_completed = Column(Boolean, default=False)
+    onboarding_profile_json = Column(Text, default="{}")
+    active_project_id = Column(String, nullable=True)
+    created_at = Column(String, default=utcnow_str)
 
 class Project(Base):
     __tablename__ = "projects"

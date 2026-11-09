@@ -7,9 +7,16 @@ import HalftoneReveal from '../components/HalftoneReveal';
 interface LandingPageProps {
   onLaunchApp: () => void;
   onExploreScenario?: () => void;
+  onOpenAuth?: (mode?: 'signin' | 'signup') => void;
+  currentUser?: any;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp, onExploreScenario }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({
+  onLaunchApp,
+  onExploreScenario,
+  onOpenAuth,
+  currentUser
+}) => {
   const [introState, setIntroState] = useState<'showing' | 'lifting' | 'hidden'>('showing');
   const [headlineActive, setHeadlineActive] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -542,12 +549,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp, onExplore
             06 FAQ
           </a>
 
-          <button
-            onClick={onLaunchApp}
-            className="px-4 py-2 bg-[#6366F1] hover:bg-[#4338CA] active:bg-[#3730A3] text-white text-[11px] font-mono tracking-[0.1em] uppercase transition cursor-pointer"
-          >
-            Launch Console
-          </button>
+          {currentUser ? (
+            <button
+              onClick={onLaunchApp}
+              className="px-4 py-2 bg-[#6366F1] hover:bg-[#4338CA] text-white text-[11px] font-mono tracking-[0.1em] uppercase transition cursor-pointer flex items-center gap-2"
+            >
+              <span>Console ({currentUser.org_name || currentUser.username})</span>
+              <span>→</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => onOpenAuth ? onOpenAuth('signin') : onLaunchApp()}
+                className="px-3.5 py-1.5 text-white/80 hover:text-white border border-white/20 hover:border-white/40 text-[11px] font-mono tracking-[0.1em] uppercase transition cursor-pointer"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => onOpenAuth ? onOpenAuth('signup') : onLaunchApp()}
+                className="px-4 py-2 bg-[#6366F1] hover:bg-[#4338CA] active:bg-[#3730A3] text-white text-[11px] font-mono tracking-[0.1em] uppercase transition cursor-pointer"
+              >
+                Get Started
+              </button>
+            </div>
+          )}
         </div>
       </nav>
 

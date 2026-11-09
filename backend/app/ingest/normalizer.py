@@ -71,14 +71,22 @@ def process_ingest(
         # Resolve or create Asset
         asset = existing_assets.get(rec.asset_name)
         if not asset:
-            # Deterministic ID for demo consistency or ULID
-            asset_id = f"ast_{uuid.uuid4().hex[:8]}"
-            if rec.asset_name == "app.lab":
-                asset_id = "ast_app"
-            elif rec.asset_name == "git.lab":
-                asset_id = "ast_git"
-            elif rec.asset_name == "redis.lab":
-                asset_id = "ast_redis"
+            # Deterministic ID for demo consistency or unique ID per project
+            if project_id == "prj_demo":
+                if rec.asset_name == "app.lab":
+                    asset_id = "ast_app"
+                elif rec.asset_name == "git.lab":
+                    asset_id = "ast_git"
+                elif rec.asset_name == "redis.lab":
+                    asset_id = "ast_redis"
+                else:
+                    asset_id = f"ast_{uuid.uuid4().hex[:8]}"
+            else:
+                asset_id = f"ast_{project_id[:10]}_{uuid.uuid4().hex[:8]}"
+
+            # If asset_id already exists in another project, make sure it is unique
+            if db.query(Asset).filter(Asset.id == asset_id).first():
+                asset_id = f"ast_{project_id[:10]}_{uuid.uuid4().hex[:8]}"
 
             asset = Asset(
                 id=asset_id,
@@ -101,7 +109,7 @@ def process_ingest(
             ev["raw_row"] = {k: redact_text(str(v)) for k, v in ev["raw_row"].items()}
 
         ev_digest = hashlib.sha256(canonical_json(ev).encode('utf-8')).hexdigest()
-        dedup_key = hashlib.sha256(f"{source_tool}|{rec.rule_id}|{asset.id}|{ev_digest}".encode('utf-8')).hexdigest()
+        dedup_key = hashlib.sha256(f"{project_id}|{source_tool}|{rec.rule_id}|{asset.id}|{ev_digest}".encode('utf-8')).hexdigest()
 
         # Check duplicate
         exists = db.query(Finding).filter(Finding.dedup_key == dedup_key).first()

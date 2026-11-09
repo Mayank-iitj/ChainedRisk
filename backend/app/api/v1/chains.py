@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.models.db_models import Chain, ChainStep, RejectedHypothesis, VerificationPlan, VerificationStep
+from backend.app.models.db_models import Chain, ChainStep, Finding, RejectedHypothesis, VerificationPlan, VerificationStep
 from backend.app.models.schemas import CorrelateRequest, ChainResponse
 from backend.app.chain.engine import chain_engine
 from backend.app.chain.remediation import compute_min_cut_remediation
@@ -158,6 +158,24 @@ def simulate_fix(id: str, excluded_finding_ids: List[str], db: Session = Depends
     Shows the judge how fixing a finding collapses the attack chains live!
     """
     current_chains = db.query(Chain).filter(Chain.project_id == id).all()
+    all_findings = db.query(Finding).filter(Finding.project_id == id).all()
+
+    # Expand excluded findings to match direct ID, stripped ID prefix, rule_id, or title keywords
+    matching_fids = set(excluded_finding_ids)
+    for f in all_findings:
+        for ex in excluded_finding_ids:
+            clean_ex = ex.lower().replace("fnd_", "").replace("ast_", "").strip()
+            f_title = (f.title or "").lower()
+            f_rule = (f.rule_id or "").lower()
+            f_id = (f.id or "").lower()
+
+            if (ex.lower() == f_id or
+                (clean_ex and (clean_ex in f_id or clean_ex in f_rule or clean_ex in f_title)) or
+                ("ssrf" in clean_ex and ("ssrf" in f_title or "request forgery" in f_title or "ssrf" in f_rule)) or
+                ("git" in clean_ex and "git" in f_title) or
+                ("redis" in clean_ex and "redis" in f_title)):
+                matching_fids.add(f.id)
+
     remaining_chains = []
 
     for c in current_chains:
@@ -165,7 +183,7 @@ def simulate_fix(id: str, excluded_finding_ids: List[str], db: Session = Depends
         broken = False
         for s in steps:
             fids = json.loads(s.finding_ids_json or "[]")
-            if any(fid in excluded_finding_ids for fid in fids):
+            if any(fid in matching_fids for fid in fids):
                 broken = True
                 break
         if not broken:
